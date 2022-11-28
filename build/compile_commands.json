@@ -1,0 +1,22 @@
+[
+{
+  "directory": "/home/iblok/LZRoverEngine/build",
+  "command": "/usr/bin/gcc  -I/home/iblok/LZRoverEngine/src/external  -g   -o CMakeFiles/LZRoverEngine.dir/src/lunarEmulation/glad.c.o   -c /home/iblok/LZRoverEngine/src/lunarEmulation/glad.c",
+  "file": "/home/iblok/LZRoverEngine/src/lunarEmulation/glad.c"
+},
+{
+  "directory": "/home/iblok/LZRoverEngine/build",
+  "command": "/usr/bin/g++   -I/home/iblok/LZRoverEngine/src/external  -g   -o CMakeFiles/LZRoverEngine.dir/src/external/Worley.cpp.o -c /home/iblok/LZRoverEngine/src/external/Worley.cpp",
+  "file": "/home/iblok/LZRoverEngine/src/external/Worley.cpp"
+},
+{
+  "directory": "/home/iblok/LZRoverEngine/build",
+  "command": "/usr/bin/g++   -I/home/iblok/LZRoverEngine/src/external  -g   -o CMakeFiles/LZRoverEngine.dir/src/external/Perlin.cpp.o -c /home/iblok/LZRoverEngine/src/external/Perlin.cpp",
+  "file": "/home/iblok/LZRoverEngine/src/external/Perlin.cpp"
+},
+{
+  "directory": "/home/iblok/LZRoverEngine/build",
+  "command": "/usr/bin/g++   -I/home/iblok/LZRoverEngine/src/external  -g   -o CMakeFiles/LZRoverEngine.dir/src/main.cpp.o -c /home/iblok/LZRoverEngine/src/main.cpp",
+  "file": "/home/iblok/LZRoverEngine/src/main.cpp"
+}
+]
