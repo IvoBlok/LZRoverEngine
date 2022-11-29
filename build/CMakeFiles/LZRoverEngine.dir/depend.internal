@@ -532,4 +532,5 @@ CMakeFiles/LZRoverEngine.dir/src/main.cpp.o
  /home/iblok/LZRoverEngine/src/lunarEmulation/user_camera.h
  /home/iblok/LZRoverEngine/src/main.cpp
  /home/iblok/LZRoverEngine/src/segmatch/normalEstimator.h
+ /home/iblok/LZRoverEngine/src/segmatch/segmentation.h
  /home/iblok/LZRoverEngine/src/slam/dynamicVoxelGrid.h

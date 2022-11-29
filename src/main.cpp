@@ -3,6 +3,7 @@
 #include "lunarEmulation/LZEngine.h"
 #include "slam/dynamicVoxelGrid.h"
 #include "segmatch/normalEstimator.h"
+#include "segmatch/segmentation.h"
 
 int main(int argc, char const *argv[])
 {
@@ -24,6 +25,7 @@ int main(int argc, char const *argv[])
   // segmap classes initialization
   DVG localDVG;
   NormalEstimator incrNormalEstimator;
+  ClusterIDManager idManager;
 
   // startup
   engine.startEngine();
@@ -94,7 +96,7 @@ int main(int argc, char const *argv[])
       incrNormalEstimator.calculateNormalsWithCovarianceMatrix(localDVG, lastNewActiveVoxelsIndices);
 
       // Segmentation
-      // ....
+      growClusters(localDVG, idManager, lastNewActiveVoxelsIndices);
 
       // Ground plane removal
       // ....

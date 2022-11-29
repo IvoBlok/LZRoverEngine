@@ -531,5 +531,6 @@ CMakeFiles/LZRoverEngine.dir/src/main.cpp.o: ../src/lunarEmulation/shaders/shade
 CMakeFiles/LZRoverEngine.dir/src/main.cpp.o: ../src/lunarEmulation/user_camera.h
 CMakeFiles/LZRoverEngine.dir/src/main.cpp.o: ../src/main.cpp
 CMakeFiles/LZRoverEngine.dir/src/main.cpp.o: ../src/segmatch/normalEstimator.h
+CMakeFiles/LZRoverEngine.dir/src/main.cpp.o: ../src/segmatch/segmentation.h
 CMakeFiles/LZRoverEngine.dir/src/main.cpp.o: ../src/slam/dynamicVoxelGrid.h
 

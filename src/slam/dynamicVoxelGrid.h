@@ -16,6 +16,7 @@
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 struct Voxel {
+public:
   unsigned int pointCount;
   long index;
 
@@ -23,6 +24,9 @@ struct Voxel {
 
   glm::vec3 centroid;
   glm::vec3 normal = glm::vec3{0.f, -1.f, 0.f};
+
+  // 0 clusterID is set to be the default, signalling that it is not part of any cluster/segment
+  unsigned int clusterID = 0;
 
   Voxel(unsigned int count_, glm::vec3 centroid_, long index_, glm::vec3 normal_) : pointCount(count_), centroid(centroid_), index(index_), normal(normal_) {}
 
@@ -39,8 +43,8 @@ public:
   unsigned int heightBitCount = 8;
 
   // scaling factor of the coordinates. conversion to voxel side length in world space = 1.f / (float)resolution
-  float resolution = 25;
-  unsigned int pointsRequiredForActiveVoxel = 2;
+  float resolution = 50;
+  unsigned int pointsRequiredForActiveVoxel = 7;
 
   std::pair<bool, unsigned int> binarySearch(long index) {
     if (voxels.size() == 0 || voxels[0].index > index) {return {false, 0}; }
