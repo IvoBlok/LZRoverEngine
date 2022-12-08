@@ -9,7 +9,7 @@ int main(int argc, char const *argv[])
 {
 
   // Engine responsible for sensor emulation and debug window
-  LZEngine engine{80, 60};
+  LZEngine engine{120, 90};
 
   // sensor data package definitions
   RoverDepthDataPackage depthData;
@@ -18,14 +18,16 @@ int main(int argc, char const *argv[])
   // visualization data blocks
   std::vector<glm::vec3> activeLocalVoxels;
   std::vector<glm::vec3> newLocalNormals;
+  std::vector<glm::vec3> newLocalNormals2;
 
+  // local map data blocks
   std::vector<long> newActiveVoxelsIndices;
   std::vector<long> lastNewActiveVoxelsIndices;
+  std::vector<long> lastNewActiveVoxelsIndices2;
 
   // segmap classes initialization
   DVG localDVG;
   NormalEstimator incrNormalEstimator;
-  ClusterIDManager idManager;
 
   // startup
   engine.startEngine();
@@ -34,12 +36,13 @@ int main(int argc, char const *argv[])
   engine.linesObjects.push_back(LineMesh{});
   engine.linesObjects.push_back(LineMesh{});
   engine.linesObjects.push_back(LineMesh{});
+  engine.linesObjects.push_back(LineMesh{});
   engine.linesObjects[0].color = glm::vec3{0.f, 0.f, 1.f};
   engine.linesObjects[1].color = glm::vec3{0.f, 1.f, 1.f};
   engine.linesObjects[2].color = glm::vec3{1.f, 1.f, 0.f};
+  engine.linesObjects[3].color = glm::vec3{1.f, 1.f, 1.f};
 
   int i = 0;
-
   while (true)
   {    
     // move the rover
@@ -49,8 +52,8 @@ int main(int argc, char const *argv[])
     
     engine.linesObjects[0].insertLine(lastRoverPos, engine.roverObject.getRoverPosition());
 
-    // take measurements
-    if (i % 25 == 0)
+    // take measurements every given amount of walking cycles
+    if (i % 5 == 0)
     {
       glm::vec3 lastRoverIMUGuess = engine.initialRealPose.translation + engine.IMUPoseEstimate.translation;
       // Calculate new IMU based rover location
@@ -89,14 +92,15 @@ int main(int argc, char const *argv[])
       /* #endregion */
 
       // Update Local DVG
+      lastNewActiveVoxelsIndices2 = lastNewActiveVoxelsIndices;
       lastNewActiveVoxelsIndices = newActiveVoxelsIndices;
       newActiveVoxelsIndices = localDVG.insertPoints(depthData.pointclouds);
 
       // Incremental Normal Estimation
-      incrNormalEstimator.calculateNormalsWithCovarianceMatrix(localDVG, lastNewActiveVoxelsIndices);
+      incrNormalEstimator.calculateNormalsWithCovarianceMatrix(localDVG, lastNewActiveVoxelsIndices2);
 
       // Segmentation
-      growClusters(localDVG, idManager, lastNewActiveVoxelsIndices);
+      growClusters(localDVG, incrNormalEstimator, lastNewActiveVoxelsIndices2);
 
       // Ground plane removal
       // ....
@@ -110,9 +114,15 @@ int main(int argc, char const *argv[])
       localDVG.getVoxelsForVisualization(activeLocalVoxels);
       engine.setDVG(activeLocalVoxels, 0);
       // normals
-      localDVG.getNormalsForVisualization(newLocalNormals);
-      engine.linesObjects[2].setLines(newLocalNormals, 0.06f);
+      localDVG.getNormalsForVisualization(newLocalNormals, true);
+      engine.linesObjects[2].setLines(newLocalNormals, 0.1f);
+
+      localDVG.getNonGroundPlaneNormalsForVisualization(newLocalNormals2);
+      engine.linesObjects[3].setLines(newLocalNormals2, 0.06f);
     }
+
+    // save to file
+    localDVG.outputVoxelPointsToFile();
 
     // render for debugging camera
     engine.debugRenderImage();

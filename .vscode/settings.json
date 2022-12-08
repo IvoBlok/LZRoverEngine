@@ -52,7 +52,11 @@
       "cinttypes": "cpp",
       "typeinfo": "cpp",
       "core": "cpp",
-      "list": "cpp"
+      "list": "cpp",
+      "chrono": "cpp",
+      "complex": "cpp",
+      "ratio": "cpp",
+      "thread": "cpp"
     },
     "cmake.configureOnOpen": false
 }

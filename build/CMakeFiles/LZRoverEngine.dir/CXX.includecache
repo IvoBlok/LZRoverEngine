@@ -1647,6 +1647,8 @@ vector
 /home/iblok/LZRoverEngine/src/segmatch/segmentation.h
 ../slam/dynamicVoxelGrid.h
 /home/iblok/LZRoverEngine/src/slam/dynamicVoxelGrid.h
+normalEstimator.h
+/home/iblok/LZRoverEngine/src/segmatch/normalEstimator.h
 vector
 -
 map
@@ -1664,5 +1666,9 @@ map
 iterator
 -
 memory
+-
+fstream
+-
+iostream
 -
 

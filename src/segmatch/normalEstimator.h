@@ -22,9 +22,6 @@ class NormalEstimator {
 public:
   using Scalar = typename Eigen::Matrix3f::Scalar;
 
-  float avgNeighbourCount = 0.f;
-  std::vector<glm::vec3> normalsVis;
-
   glm::mat3 calculateCovarianceMatrix(std::vector<Voxel>& voxels) {
     glm::mat3 covarMatrix = glm::mat3{0.f};
     glm::vec3 centroid = glm::vec3{0.f};
@@ -147,7 +144,7 @@ public:
     return crossProduct.row(index) / length;
   }
 
-  void calculateNormalWithCovarianceMatrix(DVG& dvg, long index) {
+  float calculateNormalWithCovarianceMatrix(DVG& dvg, long index) {
     // get the voxel data for which the normal is being calcualted
     Voxel* voxel;
     voxel = dvg.getVoxelFromIndex(index);
@@ -176,42 +173,20 @@ public:
     computeRoots(scaledMatrix, eigenvalues);
 
     Scalar eigenvalue = eigenvalues(0) * scale;
+    
     scaledMatrix.diagonal().array() -= eigenvalues(0);
     Eigen::Vector3f eigenvector = getLargest3x3EigenVector(scaledMatrix);
 
     voxel->normal = glm::normalize(glm::vec3{eigenvector[0], eigenvector[1], eigenvector[2]});
     if(voxel->normal.y < 0) 
       voxel->normal *= -1.f;
-  }
 
-  void calculateNormal(DVG& dvg, long index, bool renderLines = false) {
-    std::vector<Voxel> neighbours = dvg.getNeighbours(index);
-
-    Voxel* voxel;
-    voxel = dvg.getVoxelFromIndex(index);
-
-    // update running avg
-    avgNeighbourCount += neighbours.size();
-
-    if(neighbours.size() <= 1) { return; }
-
-    glm::vec3 sum;
-    for (size_t i = 0; i < neighbours.size() - 1; i++)
-    {
-      glm::vec3 vec1 = neighbours[i].centroid - voxel->centroid;
-      glm::vec3 vec2 = neighbours[i + 1].centroid - voxel->centroid;
-
-      if(renderLines) {
-        normalsVis.push_back(voxel->centroid);
-        normalsVis.push_back(vec1);
-      }
-
-      sum += glm::normalize(glm::cross(vec1, vec2));
-    }
-    // normalize
-    if(sum.y < 0) { sum *= -1; }
-
-    voxel->normal = glm::normalize(sum);
+    float eig_sum = matrix.coeff(0) + matrix.coeff(4) + matrix.coeff(8);
+    return eigenvalues(0);
+    if(eig_sum != 0)
+      return std::abs(eigenvalue / eig_sum);
+    else 
+      return 0;
   }
 
   void calculateNormalsWithCovarianceMatrix(DVG& dvg, std::vector<long>& voxelIndices) {
@@ -220,28 +195,6 @@ public:
       calculateNormalWithCovarianceMatrix(dvg, voxelIndices[i]);
     }
   }
-
-  void calculateNormals(DVG& dvg, std::vector<long>& voxelIndices) {
-    avgNeighbourCount = 0.f;
-    for (size_t i = 0; i < voxelIndices.size(); i++)
-    {
-      if(i == 0) {
-        calculateNormal(dvg, voxelIndices[i], true);
-      } else {
-        calculateNormal(dvg, voxelIndices[i]);
-      }
-    }
-
-    avgNeighbourCount = avgNeighbourCount / (float)voxelIndices.size();
-    std::cout << "average neighbours: " << avgNeighbourCount << std::endl;
-  }
-
-
-
-private:
-  
-
-
 };
 
 #endif

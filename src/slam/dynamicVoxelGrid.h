@@ -7,6 +7,9 @@
 #include <iterator>
 #include <memory>
 
+#include <fstream>
+#include <iostream>
+
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 // IN EARLY STAGES OF DEVELOPMENT
@@ -43,7 +46,7 @@ public:
   unsigned int heightBitCount = 8;
 
   // scaling factor of the coordinates. conversion to voxel side length in world space = 1.f / (float)resolution
-  float resolution = 50;
+  float resolution = 30;
   unsigned int pointsRequiredForActiveVoxel = 7;
 
   std::pair<bool, unsigned int> binarySearch(long index) {
@@ -86,7 +89,7 @@ public:
     return nullptr;
   }
 
-  long insertPoint(glm::vec3& point, glm::mat4 transformationMatrix = glm::mat4{1.f}) {
+  bool insertPoint(glm::vec3& point, long& indexToSet, glm::mat4 transformationMatrix = glm::mat4{1.f}) {
     // apply transformation
     glm::vec3 transformedPoint = transformationMatrix * glm::vec4{point, 1.f};
     
@@ -104,7 +107,7 @@ public:
       // update the centroid (i.e. the average of the point positions within the voxel) with the new point position
       voxel.centroid = ((float)(voxel.pointCount - 1) * voxel.centroid + transformedPoint) / (float)voxel.pointCount;
       
-      if(voxel.pointCount == pointsRequiredForActiveVoxel) { voxel.active = true; return index; }
+      if(voxel.pointCount == pointsRequiredForActiveVoxel) { voxel.active = true; indexToSet = index; return true; }
 
     } else {
       
@@ -115,21 +118,20 @@ public:
       voxel.index = index;
       voxels.insert(voxels.begin() + vectorLocation.second, voxel);
 
-      if(pointsRequiredForActiveVoxel == 1) { voxels[vectorLocation.second].active = true; return index; }
+      if(pointsRequiredForActiveVoxel == 1) { voxels[vectorLocation.second].active = true; indexToSet = index; return true; }
     }
 
-    return 0xFFFFFFFFFFFFFFFF;
+    return false;
   }
 
   // naive version of batch insertion
   std::vector<long> insertPoints(std::vector<glm::vec3> points, glm::mat4 transformationMatrix = glm::mat4{1.f}) {
     std::vector<long> newlyActiveVoxels;
     
-    long index = 0xFFFFFFFFFFFFFFFF;
+    long index;
     for (size_t i = 0; i < points.size(); i++)
     {
-      index = insertPoint(points[i], transformationMatrix);
-      if(index != 0xFFFFFFFFFFFFFFFF) { newlyActiveVoxels.push_back(index); }
+      if(insertPoint(points[i], index, transformationMatrix)) { newlyActiveVoxels.push_back(index); }
     }
 
     return newlyActiveVoxels;
@@ -146,16 +148,16 @@ public:
   }
 
   // slow variant, Voxel data is copied over and index is calculated in a far from optimal way
-  std::vector<Voxel> getNeighbours(long index) {
+  std::vector<Voxel> getNeighbours(long index, int range = 2) {
     std::vector<Voxel> neighbours;
 
     glm::vec3 voxelPos = getVoxelFromIndex(index)->centroid;
 
-    for (int x = -2; x <= 2; x++)
+    for (int x = -range; x <= range; x++)
     {
-      for (int y = -2; y <= 2; y++)
+      for (int y = -range; y <= range; y++)
       {
-        for (int z = -2; z <= 2; z++)
+        for (int z = -range; z <= range; z++)
         {
           if(x == 0 && y == 0 && z == 0) { continue; }
 
@@ -169,8 +171,8 @@ public:
     return neighbours;
   }
 
-  std::vector<Voxel> getNeighbours(glm::vec3 position) {
-    return getNeighbours(getIndexFromPoint(position));
+  std::vector<Voxel> getNeighbours(glm::vec3 position, int range = 2) {
+    return getNeighbours(getIndexFromPoint(position), range);
   }
 
   // Debug functionality
@@ -186,11 +188,22 @@ public:
     return;
   }
 
-  void getNormalsForVisualization(std::vector<glm::vec3>& normalsList) {
+  void getNormalsForVisualization(std::vector<glm::vec3>& normalsList, bool onlyGroundPlane = false) {
     normalsList.clear();
     for (size_t i = 0; i < voxels.size(); i++)
     {
-      if(voxels[i].active) {
+      if(voxels[i].active  && (!onlyGroundPlane || voxels[i].clusterID == 1)) {
+        normalsList.push_back(voxels[i].centroid);
+        normalsList.push_back(voxels[i].normal);
+      }
+    }
+  }
+
+  void getNonGroundPlaneNormalsForVisualization(std::vector<glm::vec3>& normalsList) {
+    normalsList.clear();
+
+    for (size_t i = 0; i < voxels.size(); i++) {
+      if(voxels[i].active && voxels[i].clusterID == 0) {
         normalsList.push_back(voxels[i].centroid);
         normalsList.push_back(voxels[i].normal);
       }
@@ -203,6 +216,27 @@ public:
     {
       normalsList.push_back(voxels_[i]->centroid);
       normalsList.push_back(voxels_[i]->normal);
+    }
+  }
+
+  void outputVoxelPointsToFile(std::string outputFileName = "voxelOutput.txt") {
+    std::fstream outputFile;
+    outputFile.open(outputFileName, ios::out);
+    for (size_t i = 0; i < voxels.size(); i++)
+    {
+      outputFile << "(" << voxels[i].centroid.x << ", " << voxels[i].centroid.y << ", " << voxels[i].centroid.z
+                  << "), ";
+    }
+  }
+  
+  void outputVoxelDatToFile(std::string outputFileName = "voxelOutput.txt") {
+    std::fstream outputFile;
+    outputFile.open(outputFileName, ios::out);
+    for (size_t i = 0; i < voxels.size(); i++)
+    {
+      outputFile << "(" << voxels[i].centroid.x << ", " << voxels[i].centroid.y << ", " << voxels[i].centroid.z << ", "
+                        << voxels[i].normal.x << ", " << voxels[i].normal.y << ", " << voxels[i].normal.z
+                  << "), ";
     }
   }
 };
