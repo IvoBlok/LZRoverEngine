@@ -13,3 +13,4 @@ find_package(assimp REQUIRED)
 
 include_directories( ${OPENGL_INCLUDE_DIRS} ${GLUT_INCLUDE_DIRS} "src/external" )
 target_link_libraries(${PROJECT_NAME} glfw assimp ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${CMAKE_DL_LIBS})
+

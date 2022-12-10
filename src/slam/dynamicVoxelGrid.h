@@ -29,7 +29,7 @@ public:
   glm::vec3 normal = glm::vec3{0.f, -1.f, 0.f};
 
   // 0 clusterID is set to be the default, signalling that it is not part of any cluster/segment
-  unsigned int clusterID = 0;
+  int clusterID = 0;
 
   Voxel(unsigned int count_, glm::vec3 centroid_, long index_, glm::vec3 normal_) : pointCount(count_), centroid(centroid_), index(index_), normal(normal_) {}
 
@@ -46,7 +46,7 @@ public:
   unsigned int heightBitCount = 8;
 
   // scaling factor of the coordinates. conversion to voxel side length in world space = 1.f / (float)resolution
-  float resolution = 30;
+  float resolution = 20;
   unsigned int pointsRequiredForActiveVoxel = 7;
 
   std::pair<bool, unsigned int> binarySearch(long index) {
@@ -148,8 +148,8 @@ public:
   }
 
   // slow variant, Voxel data is copied over and index is calculated in a far from optimal way
-  std::vector<Voxel> getNeighbours(long index, int range = 2) {
-    std::vector<Voxel> neighbours;
+  std::vector<Voxel*> getNeighbours(long index, int range = 2) {
+    std::vector<Voxel*> neighbours;
 
     glm::vec3 voxelPos = getVoxelFromIndex(index)->centroid;
 
@@ -164,14 +164,14 @@ public:
           glm::vec3 vec = glm::vec3{(float)x / resolution,(float)y / resolution, (float)z / resolution} + voxelPos;
           long index1 = getIndexFromPoint(vec);
           std::pair<bool, unsigned int> result = binarySearch(index1);
-          if(result.first && voxels[result.second].active) { neighbours.push_back(voxels[result.second]); }
+          if(result.first && voxels[result.second].active) { neighbours.push_back(&voxels[result.second]); }
         }
       }
     }
     return neighbours;
   }
 
-  std::vector<Voxel> getNeighbours(glm::vec3 position, int range = 2) {
+  std::vector<Voxel*> getNeighbours(glm::vec3 position, int range = 2) {
     return getNeighbours(getIndexFromPoint(position), range);
   }
 
@@ -199,11 +199,11 @@ public:
     }
   }
 
-  void getNonGroundPlaneNormalsForVisualization(std::vector<glm::vec3>& normalsList) {
+  void getClusterNormals(std::vector<glm::vec3>& normalsList, int ID) {
     normalsList.clear();
 
     for (size_t i = 0; i < voxels.size(); i++) {
-      if(voxels[i].active && voxels[i].clusterID == 0) {
+      if(voxels[i].active && voxels[i].clusterID == ID) {
         normalsList.push_back(voxels[i].centroid);
         normalsList.push_back(voxels[i].normal);
       }

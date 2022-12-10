@@ -22,13 +22,13 @@ class NormalEstimator {
 public:
   using Scalar = typename Eigen::Matrix3f::Scalar;
 
-  glm::mat3 calculateCovarianceMatrix(std::vector<Voxel>& voxels) {
+  glm::mat3 calculateCovarianceMatrix(std::vector<Voxel*>& voxels) {
     glm::mat3 covarMatrix = glm::mat3{0.f};
     glm::vec3 centroid = glm::vec3{0.f};
 
     for (size_t i = 0; i < voxels.size(); i++)
     {
-      centroid += voxels[i].centroid;
+      centroid += voxels[i]->centroid;
     }
     
     centroid.x /= voxels.size();
@@ -40,7 +40,7 @@ public:
     for (const auto& voxel : voxels)
     {
       glm::vec3 pt;
-      pt = voxel.centroid - centroid;
+      pt = voxel->centroid - centroid;
 
       covarMatrix[0][0] +=pt.x * pt.x;
       covarMatrix[2][2] +=pt.z * pt.z;
@@ -92,28 +92,13 @@ public:
     if(std::abs(c0) < Eigen::NumTraits < Scalar > ::epsilon()) // one root is larger then 0 -> characteristic equation is quadratic
       computeRootsFromQuadratic(c2, c1, roots);
     else {
-      const Scalar s_inv3 = Scalar(1.0/3.0);
-      const Scalar s_sqrt3 = std::sqrt(Scalar(3.0));
+      Eigen::EigenSolver<Eigen::Matrix3f> es(matrix, false);
+      Eigen::Vector3cf eigenvalues = es.eigenvalues();
 
-      Scalar c2_over_3 = c2 * s_inv3;
-      Scalar a_over_3 = (c1 - c2 * c2_over_3) * s_inv3;
-      if(a_over_3 > Scalar(0))
-        a_over_3 = Scalar(0);
-      
-      Scalar half_b = Scalar(0.5) * (c0 + c2_over_3 * (Scalar(2) * c2_over_3 * c2_over_3 - c1));
-
-      Scalar q = half_b * half_b + a_over_3 * a_over_3 * a_over_3;
-      if(q > Scalar(0))
-        q = Scalar(0);
-
-      // Compute the eigenvalues by so;lving for the roots of the fancy polynomial
-      Scalar rho = std::sqrt(-a_over_3);
-      Scalar theta = std::atan2(std::sqrt(-q), half_b) * s_inv3;
-      Scalar cos_theta = std::cos(theta);
-      Scalar sin_theta = std::sin(theta);
-      roots(0) = c2_over_3 + Scalar(2) * rho * cos_theta;
-      roots(1) = c2_over_3 - rho * (cos_theta + s_sqrt3 * sin_theta);
-      roots(2) = c2_over_3 - rho * (cos_theta - s_sqrt3 * sin_theta);
+      Eigen::Vector3f roots;
+      roots(0) = eigenvalues(0).real();
+      roots(1) = eigenvalues(1).real();
+      roots(2) = eigenvalues(2).real();
 
       // Sort in increasing order
       if(roots(0) >= roots(1))
@@ -150,11 +135,12 @@ public:
     voxel = dvg.getVoxelFromIndex(index);
 
     // get the direct grid neighbours of the voxel, excluding the voxel itself
-    std::vector<Voxel> neighbours = dvg.getNeighbours(index);
+    std::vector<Voxel*> neighbours = dvg.getNeighbours(index, 3);
 
     // add a copy of the main voxel to the list/vector
-    neighbours.push_back(Voxel{});
-    neighbours.back().centroid = voxel->centroid;
+    Voxel v{};
+    neighbours.push_back(&v);
+    neighbours.back()->centroid = voxel->centroid;
     
     // calculate the covariance matrix of the neighbourhood
     // the elements of this matrix give the relation between two points in the neighboorhood; If one point gets further away, is the other more likely to also get further away, or the opposity, closer by?
@@ -169,24 +155,40 @@ public:
     
     Eigen::Matrix3f scaledMatrix = matrix / scale;
 
-    Eigen::Vector3f eigenvalues;
-    computeRoots(scaledMatrix, eigenvalues);
+    //Eigen::Vector3f eigenvalues;
+    //computeRoots(scaledMatrix, eigenvalues);
 
-    Scalar eigenvalue = eigenvalues(0) * scale;
-    
-    scaledMatrix.diagonal().array() -= eigenvalues(0);
     Eigen::Vector3f eigenvector = getLargest3x3EigenVector(scaledMatrix);
 
+    // extract normal
     voxel->normal = glm::normalize(glm::vec3{eigenvector[0], eigenvector[1], eigenvector[2]});
     if(voxel->normal.y < 0) 
       voxel->normal *= -1.f;
 
-    float eig_sum = matrix.coeff(0) + matrix.coeff(4) + matrix.coeff(8);
-    return eigenvalues(0);
+    // calculate curvature
+    float curvature = 0.f;
+    neighbours.pop_back();
+    for (size_t i = 0; i < neighbours.size(); i++)
+    {
+      //curvature += std::abs();
+      glm::vec3 relativeVector = neighbours[i]->centroid - voxel->centroid;
+      float sizeOfRelativeVec = std::pow(glm::length(relativeVector), 2);
+      curvature += std::abs(glm::dot(relativeVector, voxel->normal)) * 1.f/sizeOfRelativeVec;
+    }
+    if(neighbours.size() == 0) {
+      curvature = NULL;
+    } else {
+      curvature /= (float)neighbours.size();
+    }
+    return curvature;
+    /*
+    Scalar eig_sum = eigenvalues(0) + eigenvalues(1) + eigenvalues(2);//matrix.coeff(0) + matrix.coeff(4) + matrix.coeff(8);
+    std::cout << eigenvalues(0) << " : " << eig_sum << std::endl;
     if(eig_sum != 0)
-      return std::abs(eigenvalue / eig_sum);
+      return std::abs(eigenvalues(0) / eig_sum);
     else 
       return 0;
+    */
   }
 
   void calculateNormalsWithCovarianceMatrix(DVG& dvg, std::vector<long>& voxelIndices) {

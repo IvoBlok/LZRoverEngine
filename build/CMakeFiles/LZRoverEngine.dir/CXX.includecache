@@ -1649,6 +1649,8 @@ vector
 /home/iblok/LZRoverEngine/src/slam/dynamicVoxelGrid.h
 normalEstimator.h
 /home/iblok/LZRoverEngine/src/segmatch/normalEstimator.h
+../lunarEmulation/LZEngine.h
+/home/iblok/LZRoverEngine/src/lunarEmulation/LZEngine.h
 vector
 -
 map
