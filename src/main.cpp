@@ -7,7 +7,6 @@
 
 int main(int argc, char const *argv[])
 {
-
   // Engine responsible for sensor emulation and debug window
   LZEngine engine{120, 90};
 
