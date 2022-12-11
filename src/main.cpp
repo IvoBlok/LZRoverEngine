@@ -7,104 +7,62 @@
 
 int main(int argc, char const *argv[])
 {
+
+
   // Engine responsible for sensor emulation and debug window
-  LZEngine engine{120, 90};
-
-  // sensor data package definitions
-  RoverDepthDataPackage depthData;
-  RoverImageDataPackage imageData;
-
-  // visualization data blocks
-  std::vector<glm::vec3> activeLocalVoxels;
-  std::vector<glm::vec3> newLocalNormals;
-  std::vector<glm::vec3> newLocalNormals2;
-
-  // local map data blocks
-  std::vector<long> recentlyActivatedVoxelIndices[15];
-
-  // segmap classes initialization
-  DVG localDVG;
-  NormalEstimator incrNormalEstimator;
+  LZEngine engine{160, 120};
 
   // startup
   engine.startEngine();
+  engine.lunarSurfaceObject.baseSurfaceHighDetail.generateLunarSurface(200, 200, 0.05f, "../resources/textures/sandDiffuseMap.png", 0.004f, glm::vec2{100.f, 100.f});
 
-  // set debug line renderer colors for the different types
+  // sensor data package definitions
+  RoverDepthDataPackage depthData;
 
-  int i = 0;
-  while (true)
-  {    
-    // move the rover
-    engine.updateDeltaTime();
-    glm::vec3 lastRoverPos = engine.roverObject.getRoverPosition();
-    engine.moveRoverInDirection(glm::vec3{std::cos(0.1f * glfwGetTime()), 0.f, std::sin(0.1f * glfwGetTime())}, 0.1f);
+  // visualization data blocks
+  std::vector<glm::vec3> activeLocalVoxels;
 
-    // take measurements every given amount of walking cycles
-    if (i % 8 == 0)
+  // segmap classes initialization
+  DVG localDVG;
+ 
+
+  // generate rocks
+  std::vector<float> sizes = engine.lunarSurfaceObject.rocks.generateRockSizes(100);
+  for (size_t x = 0; x < 10; x++)
+  {
+    for (size_t z = 0; z < 10; z++)
     {
-      glm::vec3 lastRoverIMUGuess = engine.initialRealPose.translation + engine.IMUPoseEstimate.translation;
-      // Calculate new IMU based rover location
-      engine.updateIMUEstimate(false);
-
-      // get depth + pose data
-      engine.getDepthDataPackage(depthData);
-
-      /* #region  Depth data registration */
-      glm::mat3 inversePoseRot = glm::inverse(depthData.pose.rotation);
-      glm::mat3 inverseInitPoseRot = glm::inverse(engine.getInitialRealPose().rotation);
-      glm::vec3 initPoseTranslation = engine.getInitialRealPose().translation;
-
-      for (size_t i = 0; i < depthData.pointclouds.size(); i++)
-      {
-        for (size_t j = 0; j < depthData.pointclouds[i].size(); j++)
-        {
-          // offset for the sensor position
-          depthData.pointclouds[i][j] += engine.roverObject.depthCameraViewMatrices[i].relativePosition;
-
-          // transform to coords relative to initial rover state
-          depthData.pointclouds[i][j] = inversePoseRot * depthData.pointclouds[i][j];
-
-          // translate form initial pose position
-          depthData.pointclouds[i][j] += depthData.pose.translation;
-
-          // transform from relative to absolute purely for debug reasons
-          depthData.pointclouds[i][j] += initPoseTranslation;
-          depthData.pointclouds[i][j] = inverseInitPoseRot * depthData.pointclouds[i][j];
-        }
-      }
-      /* #endregion */
-
-      // Update Local DVG and update the buffer layers of the new active voxels
-      for (size_t i = 0; i < 15 - 1; i++)
-      {
-        recentlyActivatedVoxelIndices[i] = recentlyActivatedVoxelIndices[i + 1];
-      }
-      
-      recentlyActivatedVoxelIndices[14] = localDVG.insertPoints(depthData.pointclouds);
-
-      // Incremental Normal Estimation
-      incrNormalEstimator.calculateNormalsWithCovarianceMatrix(localDVG, recentlyActivatedVoxelIndices[10]);
-
-      // Segmentation
-      growClusters(localDVG, incrNormalEstimator, recentlyActivatedVoxelIndices[10]);
-      growClustersWithoutGroundplane(localDVG, incrNormalEstimator, recentlyActivatedVoxelIndices[0]);
-
-      // Incremental Feature Extraction
-      // ....
-
-      // Visualization
-      // ============================
-      // export Local DVG To render engine for debug camera
-      localDVG.getVoxelsForVisualization(activeLocalVoxels);
-      engine.setDVG(activeLocalVoxels, 0);
-      
-      // visualize normals
-      loadNormalsIntoEngine(localDVG, engine);
+      engine.lunarSurfaceObject.rocks.generateRock(glm::vec3{(float)x * 5.f + 1.0f, 0.f, (float)z * 5.f}, glm::vec3{sizes[x*10+z]}, 4);
+      std::cout << "1 done!\n";
     }
+  }
 
-    // render for debugging camera
-    engine.debugRenderImage();
-    i++;
+  for (size_t x = 0; x < 10; x++)
+  {
+    for (size_t z = 0; z < 10; z++)
+    {
+      engine.roverObject.setRoverPosition(glm::vec3{(float)x * 5.f, 0.f, (float)z * 5.f});
+      std::cout << "2 done!\n";
+
+      for (size_t p = 0; p < 15; p++) {    
+        // get depth + pose data
+        engine.getDepthDataPackage(depthData);
+
+        /* #endregion */
+
+        localDVG.insertPoints(depthData.pointclouds);
+
+        // Visualization
+        // ============================
+        // export Local DVG To render engine for debug camera
+        localDVG.getVoxelsForVisualization(activeLocalVoxels);
+        engine.setDVG(activeLocalVoxels, 0);
+      }
+
+      localDVG.outputVoxelPointsToFile("rockscan" + std::to_string(x*10 + z) + ".txt");
+      
+      localDVG.voxels.clear();
+    }
   }
   engine.stopEngine();
 

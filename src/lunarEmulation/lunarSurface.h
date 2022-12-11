@@ -3,6 +3,8 @@
 
 #include "mesh.h"
 
+#include <chrono>
+
 class BaseLunarSurface : public Mesh {
 public:
   unsigned int gridXSquareCount;
@@ -426,7 +428,26 @@ public:
     return sizes;
   }
 
+  std::vector<float> generateRockSizes(int count) {
+    std::vector<float> sizes;
+
+    float ePow = std::exp(7.f/5.f);
+    float a = 1.f/14.f;
+
+    for (size_t i = 0; i < count; i++)
+    {
+      float x = (float)rand() / (float)RAND_MAX + 0.0001f;
+
+      sizes.push_back(a * std::log(ePow/(3*x)));
+    }
+
+    return sizes;
+  }
+  
+
   void generateRock(glm::vec3 offset = glm::vec3{0.f}, glm::vec3 scale = glm::vec3{1.f}, unsigned int recursionDepth = 0) {
+    srand(time(nullptr));
+
     unsigned int vertexCountBeforeRockGen = vertices.size();
     unsigned int indexCountBeforeRockGen = indices.size();
 

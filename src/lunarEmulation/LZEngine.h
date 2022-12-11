@@ -119,9 +119,9 @@ public:
   const float FAR_PLANE = 25.f;
 
   // max distance the depth buffer is supported to see per direction
-  const float MAX_X = 10.f;
-  const float MAX_Y = 10.f;
-  const float MAX_Z = 10.f;
+  const float MAX_X = 1000.f;
+  const float MAX_Y = 1000.f;
+  const float MAX_Z = 1000.f;
 
   // default constructor of LZEngine
   // =============================================
@@ -170,13 +170,13 @@ public:
 
         // translate the world position of the point into relative to the rover zero point 
         worldPos -= roverPosition;
-        // transform relative world position to relative rover position, with scaling removed
-        worldPos = WorldToRoverMatrix * worldPos;
-        // translate from relative to rover zero to relative to sensor zero
-        worldPos -= roverObject.depthCameraViewMatrices[sensorID].relativePosition;
+
+        // for rock training data this removes the points below a arbitrary plane
+        glm::vec3 planeNormal = glm::vec3{0.f, 1.f, 0.f} + glm::vec3{(float)rand()/(float)RAND_MAX * 0.2f, 0.f, (float)rand()/(float)RAND_MAX * 0.2f};
+        bool aboveGroundPlane = glm::dot(worldPos - glm::vec3{1.f, 0.f, 0.f}, planeNormal) > 0.f;  
 
         // apply noise (and do depth check)
-        if(!pclNoiseModelObj.applyPointNoise(worldPos)) { pointcloud.push_back(worldPos); }
+        if(!pclNoiseModelObj.applyPointNoise(worldPos) && aboveGroundPlane) { pointcloud.push_back(worldPos); }
       }
     }
 
@@ -274,9 +274,6 @@ public:
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);  
 
-    // generate smooth part of the surface
-    lunarSurfaceObject.generateSmoothSurface();
-
     // generate 'rover'
     roverObject.setupDefaultRover(lunarSurfaceObject);
 
@@ -294,7 +291,7 @@ public:
     poseNoiseModelObj = PoseNoiseModel{IMUPoseEstimate.rotation, IMUPoseEstimate.translation, IMUPoseEstimate.rotation, IMUPoseEstimate.translation};
 
     // Set debug camera
-    camera.Position = glm::vec3{1.f, 2.f, 1.f};
+    camera.Position = glm::vec3{1.f, 1.f, 5.f};
   }
 
   // function responsible for cleaning up the used memory.

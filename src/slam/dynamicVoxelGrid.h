@@ -46,8 +46,8 @@ public:
   unsigned int heightBitCount = 8;
 
   // scaling factor of the coordinates. conversion to voxel side length in world space = 1.f / (float)resolution
-  float resolution = 20;
-  unsigned int pointsRequiredForActiveVoxel = 7;
+  float resolution = 65;
+  unsigned int pointsRequiredForActiveVoxel = 20;
 
   std::pair<bool, unsigned int> binarySearch(long index) {
     if (voxels.size() == 0 || voxels[0].index > index) {return {false, 0}; }
