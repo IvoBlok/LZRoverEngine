@@ -31,34 +31,24 @@ int main(int argc, char const *argv[])
   // startup
   engine.startEngine();
 
-  // set debug line renderer colors for the different types
-
   int i = 0;
   while (true)
   {    
     // move the rover
     engine.updateDeltaTime();
-    glm::vec3 lastRoverPos = engine.roverObject.getRoverPosition();
     engine.moveRoverInDirection(glm::vec3{std::cos(0.1f * glfwGetTime()), 0.f, std::sin(0.1f * glfwGetTime())}, 0.1f);
 
     // take measurements every given amount of walking cycles
     if (i % 8 == 0)
     {
       // every given amount of measurements, copy the local map into the global map, and empty the local map for the next batch of measurements
-      if(i % 160 == 0) {
-        globalDVG.insertPoints(localDVG);
-        localDVG.voxels.clear();
+      if(i % (8 * 25) == 0) {
+        globalDVG.copyAndRemoveDVG(localDVG);
 
         for (size_t i = 0; i < 15; i++)
-        {
           recentlyActivatedVoxelIndices[i].clear();
-        }
-        //TODO copy these over to a global list of them
-        clusters.clear();
-        clustersWithoutGroundplane.clear();
       }
 
-      glm::vec3 lastRoverIMUGuess = engine.initialRealPose.translation + engine.IMUPoseEstimate.translation;
       // Calculate new IMU based rover location
       engine.updateIMUEstimate(false);
 
@@ -92,9 +82,7 @@ int main(int argc, char const *argv[])
 
       // Update Local DVG and update the buffer layers of the new active voxels
       for (size_t i = 0; i < 15 - 1; i++)
-      {
         recentlyActivatedVoxelIndices[i] = recentlyActivatedVoxelIndices[i + 1];
-      }
       
       recentlyActivatedVoxelIndices[14] = localDVG.insertPoints(depthData.pointclouds);
 
@@ -102,8 +90,8 @@ int main(int argc, char const *argv[])
       incrNormalEstimator.calculateNormalsWithCovarianceMatrix(localDVG, recentlyActivatedVoxelIndices[10]);
 
       // Incremental Segmentation
-      growClusters(localDVG, incrNormalEstimator, recentlyActivatedVoxelIndices[10]);
-      growClustersWithoutGroundplane(localDVG, incrNormalEstimator, recentlyActivatedVoxelIndices[0]);
+      Segmentation::growGroundplaneClusters(localDVG, incrNormalEstimator, recentlyActivatedVoxelIndices[10]);
+      Segmentation::growObstacleClusters(localDVG, incrNormalEstimator, recentlyActivatedVoxelIndices[0]);
 
       // Incremental Feature Extraction
       // ....
@@ -117,7 +105,7 @@ int main(int argc, char const *argv[])
       engine.setDVG(activeVoxels, 1, glm::vec3{1.f, 1.f, 0.f});
       
       // visualize local normals
-      loadNormalsIntoEngine(localDVG, engine);
+      Segmentation::loadNormalsIntoEngine(localDVG, engine);
     }
 
     // render for debugging camera

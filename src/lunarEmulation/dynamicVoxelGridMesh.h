@@ -22,7 +22,7 @@ public:
   // =============================================
   // std::vector<glm::vec3> points : vector of vec3 points defining the world positions of the center of the voxels in the Dynamic Voxel Grid
   void initDVG(std::vector<glm::vec3>& points) {
-    if(points.size() == 0) { std::cout << "Invalid initDVG call: given pointcloud is empty \n"; return; }
+    if(points.size() == 0) { return; }
     if(vertices.size() > 0) { std::cout << "Invalid initDVG call: DVGMesh is already initialized \n"; return; }
     for (size_t i = 0; i < points.size(); i++)
     {

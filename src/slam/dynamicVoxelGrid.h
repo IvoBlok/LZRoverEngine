@@ -2,21 +2,23 @@
 #define DYNAMIC_VOXEL_GRID_H
 
 #include <glm/glm.hpp>
+
 #include <vector>
 #include <map>
 #include <iterator>
 #include <memory>
+#include <list>
 
 #include <fstream>
 #include <iostream>
 
-// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-// IN EARLY STAGES OF DEVELOPMENT
-// IN EARLY STAGES OF DEVELOPMENT
-// IN EARLY STAGES OF DEVELOPMENT
-// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// IN NOT VERY EARLY STAGES OF DEVELOPMENT
+// IN NOT VERY EARLY STAGES OF DEVELOPMENT
+// IN NOT VERY EARLY STAGES OF DEVELOPMENT
+// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 struct Voxel {
 public:
@@ -28,7 +30,7 @@ public:
   glm::vec3 centroid;
   glm::vec3 normal = glm::vec3{0.f, -1.f, 0.f};
 
-  // 0 clusterID is set to be the default, signalling that it is not part of any cluster/segment
+  // 0 clusterID is set to be the default, signalling that it is not part of any cluster/segment (yet)
   int clusterID = 0;
 
   Voxel(unsigned int count_, glm::vec3 centroid_, long index_, glm::vec3 normal_) : pointCount(count_), centroid(centroid_), index(index_), normal(normal_) {}
@@ -36,9 +38,20 @@ public:
   Voxel() {}
 };
 
+struct Cluster {
+  int ID;
+  std::vector<long> voxelIndices;
+
+  Cluster(int id) {
+    ID = id;
+  }
+};
+
 class DVG {
 public:
   std::vector<Voxel> voxels;
+  std::list<Cluster> groundplaneClusters;
+  std::list<Cluster> obstacleClusters;
 
   // max 63, so the max value of a long is unique, and reserved for signaling non-initialized
   unsigned int lengthBitCount = 12;
@@ -131,7 +144,6 @@ public:
     return insertPoint(point, placeholderIndex, transformationMatrix, count, normal, clusterID);
   }
 
-  // naive version of batch insertion
   std::vector<long> insertPoints(std::vector<glm::vec3> points, glm::mat4 transformationMatrix = glm::mat4{1.f}) {
     std::vector<long> newlyActiveVoxels;
     
@@ -159,6 +171,30 @@ public:
     {
       insertPoint(dvg.voxels[i].centroid, transformationMatrix, dvg.voxels[i].pointCount, dvg.voxels[i].normal, dvg.voxels[i].clusterID);
     }
+  }
+
+  void insertClusters(DVG& dvg) {
+    for (auto cluster = dvg.groundplaneClusters.rbegin(); cluster != dvg.groundplaneClusters.rend(); cluster++)
+    {
+      groundplaneClusters.push_back(*cluster);
+    }
+    for (auto cluster = dvg.obstacleClusters.rbegin(); cluster != dvg.obstacleClusters.rend(); cluster++)
+    {
+      obstacleClusters.push_back(*cluster);
+    }
+  }
+
+  void copyAndRemoveDVG(DVG& dvg) {
+    insertClusters(dvg);
+    insertPoints(dvg);
+
+    dvg.empty();
+  }
+
+  void empty() {
+    obstacleClusters.clear();
+    groundplaneClusters.clear();
+    voxels.clear();
   }
 
   // slow variant, Voxel data is copied over and index is calculated in a far from optimal way
