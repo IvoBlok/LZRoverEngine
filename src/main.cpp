@@ -16,7 +16,7 @@ int main(int argc, char const *argv[])
   RoverImageDataPackage imageData;
 
   // visualization data blocks
-  std::vector<glm::vec3> activeLocalVoxels;
+  std::vector<glm::vec3> activeVoxels;
   std::vector<glm::vec3> newLocalNormals;
   std::vector<glm::vec3> newLocalNormals2;
 
@@ -25,6 +25,7 @@ int main(int argc, char const *argv[])
 
   // segmap classes initialization
   DVG localDVG;
+  DVG globalDVG;
   NormalEstimator incrNormalEstimator;
 
   // startup
@@ -43,6 +44,20 @@ int main(int argc, char const *argv[])
     // take measurements every given amount of walking cycles
     if (i % 8 == 0)
     {
+      // every given amount of measurements, copy the local map into the global map, and empty the local map for the next batch of measurements
+      if(i % 160 == 0) {
+        globalDVG.insertPoints(localDVG);
+        localDVG.voxels.clear();
+
+        for (size_t i = 0; i < 15; i++)
+        {
+          recentlyActivatedVoxelIndices[i].clear();
+        }
+        //TODO copy these over to a global list of them
+        clusters.clear();
+        clustersWithoutGroundplane.clear();
+      }
+
       glm::vec3 lastRoverIMUGuess = engine.initialRealPose.translation + engine.IMUPoseEstimate.translation;
       // Calculate new IMU based rover location
       engine.updateIMUEstimate(false);
@@ -86,7 +101,7 @@ int main(int argc, char const *argv[])
       // Incremental Normal Estimation
       incrNormalEstimator.calculateNormalsWithCovarianceMatrix(localDVG, recentlyActivatedVoxelIndices[10]);
 
-      // Segmentation
+      // Incremental Segmentation
       growClusters(localDVG, incrNormalEstimator, recentlyActivatedVoxelIndices[10]);
       growClustersWithoutGroundplane(localDVG, incrNormalEstimator, recentlyActivatedVoxelIndices[0]);
 
@@ -95,11 +110,13 @@ int main(int argc, char const *argv[])
 
       // Visualization
       // ============================
-      // export Local DVG To render engine for debug camera
-      localDVG.getVoxelsForVisualization(activeLocalVoxels);
-      engine.setDVG(activeLocalVoxels, 0);
+      // export Local and Glboal DVG To render engine for debug camera
+      localDVG.getVoxelsForVisualization(activeVoxels);
+      engine.setDVG(activeVoxels, 0);
+      globalDVG.getVoxelsForVisualization(activeVoxels);
+      engine.setDVG(activeVoxels, 1, glm::vec3{1.f, 1.f, 0.f});
       
-      // visualize normals
+      // visualize local normals
       loadNormalsIntoEngine(localDVG, engine);
     }
 

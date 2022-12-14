@@ -12,12 +12,6 @@
 #define CAN_GROW_TO_VOXEL_ANGLE_THRESHOLD 12.f
 #define MAX_ALLOWED_SEED_CURVATURE 0.15f
 
-// ===============================
-// ===============================
-// Version 2
-// ===============================
-// ===============================
-
 struct Cluster {
   int ID;
   std::vector<long> voxelIndices;
@@ -35,11 +29,11 @@ int clusterIDCounterGroundplane = 0;
 // check if a given voxel can be a seed to start growing a cluster from
 bool canBeSeed(DVG& dvg, NormalEstimator& normalEstimator,  Voxel* voxel) {
   // check if curvature is below some limit
-  float curvature = normalEstimator.calculateNormalWithCovarianceMatrix(dvg, voxel->index);
-  if(curvature)
+  float curvature;
+  if(normalEstimator.calculateNormalWithCovarianceMatrix(dvg, voxel->index, curvature)) {
     return curvature < (float)MAX_ALLOWED_SEED_CURVATURE;
-  else 
-    return false;
+  }
+  return false;
 }
 
 // check if two adjacent voxels follow the criteria for being in the same cluster
@@ -113,7 +107,6 @@ void setClusterID(Voxel* voxel, std::list<Cluster>& clusters, int clusterID) {
   voxel->clusterID = clusterID;
 }
 
-
 void growFromSeed(DVG& dvg, NormalEstimator& normalEstimator, Voxel* voxel) {
   // check if the initial seed is already in a cluster
   if(voxel->clusterID != 0)
@@ -158,6 +151,9 @@ void growFromSeed(DVG& dvg, NormalEstimator& normalEstimator, Voxel* voxel) {
 }
 
 void growClusters(DVG& dvg, NormalEstimator& normalEstimator, std::vector<long> newActiveVoxelIndices) {
+  if(newActiveVoxelIndices.size() == 0) {
+    return;
+  }
   // get seeds from newly active voxels
   std::vector<Voxel*> seeds;
   for (size_t i = 0; i < newActiveVoxelIndices.size(); i++) {
@@ -175,8 +171,6 @@ void growClusters(DVG& dvg, NormalEstimator& normalEstimator, std::vector<long> 
     growFromSeed(dvg, normalEstimator, seeds[i]);
   }
 }
-
-
 
 
 void growFromSeedWithoutGroundplane(DVG& dvg, NormalEstimator& normalEstimator, Voxel* voxel) {
@@ -199,7 +193,6 @@ void growFromSeedWithoutGroundplane(DVG& dvg, NormalEstimator& normalEstimator, 
     std::vector<Voxel*> neighbours = dvg.getNeighbours(dvg.getIndexFromPoint(seed->centroid), 2);
     
     for (int j = 0; j < neighbours.size(); j++) {
-      std::cout << neighbours[j]->clusterID << " ";
       // filter out neighbours in ground plane
       //TODO Assuming here that the programs found the largest cluster to be the ground plane, which is very much not a given
 
@@ -218,11 +211,13 @@ void growFromSeedWithoutGroundplane(DVG& dvg, NormalEstimator& normalEstimator, 
         setClusterID(neighbours[j], clustersWithoutGroundplane, clusterIDCounterGroundplane);
       }
     }
-    std::cout << std::endl; 
   }
 }
 
 void growClustersWithoutGroundplane(DVG& dvg, NormalEstimator& normalEstimator, std::vector<long> newActiveVoxelIndices) {
+  if(newActiveVoxelIndices.size() == 0) {
+    return;
+  }
   // get seeds from newly active voxels
   std::vector<Voxel*> seeds;
   for (size_t i = 0; i < newActiveVoxelIndices.size(); i++) {
@@ -240,6 +235,7 @@ void growClustersWithoutGroundplane(DVG& dvg, NormalEstimator& normalEstimator, 
     growFromSeedWithoutGroundplane(dvg, normalEstimator, seeds[i]);
   }
 }
+
 
 // horrible algorithm for visualization, scales terribly with time
 void loadNormalsIntoEngine(DVG& dvg, LZEngine& engine) {

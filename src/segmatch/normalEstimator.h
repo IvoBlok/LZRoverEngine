@@ -129,7 +129,7 @@ public:
     return crossProduct.row(index) / length;
   }
 
-  float calculateNormalWithCovarianceMatrix(DVG& dvg, long index) {
+  bool calculateNormalWithCovarianceMatrix(DVG& dvg, long index, float& curvature) {
     // get the voxel data for which the normal is being calcualted
     Voxel* voxel;
     voxel = dvg.getVoxelFromIndex(index);
@@ -166,7 +166,7 @@ public:
       voxel->normal *= -1.f;
 
     // calculate curvature
-    float curvature = 0.f;
+    curvature = 0.f;
     neighbours.pop_back();
     for (size_t i = 0; i < neighbours.size(); i++)
     {
@@ -176,21 +176,18 @@ public:
       curvature += std::abs(glm::dot(relativeVector, voxel->normal)) * 1.f/sizeOfRelativeVec;
     }
     if(neighbours.size() == 0) {
-      curvature = NULL;
+      return false;
     } else {
       curvature /= (float)neighbours.size();
     }
-    return curvature;
-    /*
-    Scalar eig_sum = eigenvalues(0) + eigenvalues(1) + eigenvalues(2);//matrix.coeff(0) + matrix.coeff(4) + matrix.coeff(8);
-    std::cout << eigenvalues(0) << " : " << eig_sum << std::endl;
-    if(eig_sum != 0)
-      return std::abs(eigenvalues(0) / eig_sum);
-    else 
-      return 0;
-    */
+    return true;
   }
 
+  bool calculateNormalWithCovarianceMatrix(DVG& dvg, long index) {
+    float placeholderCurvature;
+    return calculateNormalWithCovarianceMatrix(dvg, index, placeholderCurvature);
+  }
+  
   void calculateNormalsWithCovarianceMatrix(DVG& dvg, std::vector<long>& voxelIndices) {
     for (size_t i = 0; i < voxelIndices.size(); i++)
     {

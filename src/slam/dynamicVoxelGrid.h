@@ -89,7 +89,7 @@ public:
     return nullptr;
   }
 
-  bool insertPoint(glm::vec3& point, long& indexToSet, glm::mat4 transformationMatrix = glm::mat4{1.f}) {
+  bool insertPoint(glm::vec3& point, long& indexToSet, glm::mat4 transformationMatrix = glm::mat4{1.f}, unsigned int count = 1, glm::vec3 normal = glm::vec3{0.f}, int clusterID = 0) {
     // apply transformation
     glm::vec3 transformedPoint = transformationMatrix * glm::vec4{point, 1.f};
     
@@ -103,25 +103,32 @@ public:
 
       Voxel& voxel = voxels[vectorLocation.second];
       // update the pointCount to reflect the added point
-      voxel.pointCount += 1;
+      voxel.pointCount += count;
       // update the centroid (i.e. the average of the point positions within the voxel) with the new point position
       voxel.centroid = ((float)(voxel.pointCount - 1) * voxel.centroid + transformedPoint) / (float)voxel.pointCount;
       
-      if(voxel.pointCount == pointsRequiredForActiveVoxel) { voxel.active = true; indexToSet = index; return true; }
+      if(voxel.pointCount - count < pointsRequiredForActiveVoxel && voxel.pointCount >= pointsRequiredForActiveVoxel) { voxel.active = true; indexToSet = index; return true; }
 
     } else {
       
       // make new voxel, update it's data and push insert it in the correct location
       Voxel voxel;
-      voxel.pointCount = 1;
+      voxel.pointCount = count;
       voxel.centroid = transformedPoint;
       voxel.index = index;
+      voxel.clusterID = clusterID;
+      voxel.normal = normal;
       voxels.insert(voxels.begin() + vectorLocation.second, voxel);
 
-      if(pointsRequiredForActiveVoxel == 1) { voxels[vectorLocation.second].active = true; indexToSet = index; return true; }
+      if(pointsRequiredForActiveVoxel <= count) { voxels[vectorLocation.second].active = true; indexToSet = index; return true; }
     }
 
     return false;
+  }
+
+  bool insertPoint(glm::vec3& point, glm::mat4 transformationMatrix = glm::mat4{1.f}, unsigned int count = 1, glm::vec3 normal = glm::vec3{0.f}, int clusterID = 0) {
+    long placeholderIndex;
+    return insertPoint(point, placeholderIndex, transformationMatrix, count, normal, clusterID);
   }
 
   // naive version of batch insertion
@@ -145,6 +152,13 @@ public:
       newlyActiveVoxels.insert(newlyActiveVoxels.end(), newVoxels.begin(), newVoxels.end());
     }
     return newlyActiveVoxels;
+  }
+
+  void insertPoints(DVG& dvg, glm::mat4 transformationMatrix = glm::mat4{1.f}) {
+    for (size_t i = 0; i < dvg.voxels.size(); i++)
+    {
+      insertPoint(dvg.voxels[i].centroid, transformationMatrix, dvg.voxels[i].pointCount, dvg.voxels[i].normal, dvg.voxels[i].clusterID);
+    }
   }
 
   // slow variant, Voxel data is copied over and index is calculated in a far from optimal way
@@ -177,8 +191,9 @@ public:
 
   // Debug functionality
   // ===========================
-  void getVoxelsForVisualization(std::vector<glm::vec3>& visualizationPointList, bool returnAllVoxels = false) {
-    visualizationPointList.clear();
+  void getVoxelsForVisualization(std::vector<glm::vec3>& visualizationPointList, bool returnAllVoxels = false, bool clearList = true) {
+    if(clearList)
+      visualizationPointList.clear();
     for (size_t i = 0; i < voxels.size(); i++)
     {
       if(voxels[i].active || returnAllVoxels) {
@@ -188,8 +203,9 @@ public:
     return;
   }
 
-  void getNormalsForVisualization(std::vector<glm::vec3>& normalsList, bool onlyGroundPlane = false) {
-    normalsList.clear();
+  void getNormalsForVisualization(std::vector<glm::vec3>& normalsList, bool onlyGroundPlane = false, bool clearList = true) {
+    if(clearList)
+      normalsList.clear();
     for (size_t i = 0; i < voxels.size(); i++)
     {
       if(voxels[i].active  && (!onlyGroundPlane || voxels[i].clusterID == 1)) {
@@ -199,9 +215,9 @@ public:
     }
   }
 
-  void getClusterNormals(std::vector<glm::vec3>& normalsList, int ID) {
-    normalsList.clear();
-
+  void getClusterNormals(std::vector<glm::vec3>& normalsList, int ID, bool clearList = true) {
+    if(clearList)
+      normalsList.clear();
     for (size_t i = 0; i < voxels.size(); i++) {
       if(voxels[i].active && voxels[i].clusterID == ID) {
         normalsList.push_back(voxels[i].centroid);
@@ -210,8 +226,9 @@ public:
     }
   }
 
-  void getNormalsForVisualization(std::vector<glm::vec3>& normalsList, std::vector<Voxel*> voxels_) {
-    normalsList.clear();
+  void getNormalsForVisualization(std::vector<glm::vec3>& normalsList, std::vector<Voxel*> voxels_, bool clearList = true) {
+    if(clearList)
+      normalsList.clear();
     for (size_t i = 0; i < voxels_.size(); i++)
     {
       normalsList.push_back(voxels_[i]->centroid);
