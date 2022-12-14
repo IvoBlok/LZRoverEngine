@@ -49,7 +49,12 @@ struct Cluster {
 
 class DVG {
 public:
+  // 'voxels' contains the actual data the DVG is holding. It's one big block in memory, with its elements sorted by the Voxel index parameter. 
+  // This index is calculated from the voxel centroid with a 3D - 1D mapping. 
+  // Because of the data structure used, a reference or pointer to an element might be invalidated if new elements are inserted in the vector.
   std::vector<Voxel> voxels;
+  // two lists of clusters contain the voxels that have been clustered together by the segmentation algorithm. 
+  // one has negative clusterID's, one positive, to differentiate them easier from a voxel.
   std::list<Cluster> groundplaneClusters;
   std::list<Cluster> obstacleClusters;
 
@@ -60,6 +65,7 @@ public:
 
   // scaling factor of the coordinates. conversion to voxel side length in world space = 1.f / (float)resolution
   float resolution = 20;
+  // minimum amount of points required in a voxel to make it active
   unsigned int pointsRequiredForActiveVoxel = 7;
 
   std::pair<bool, unsigned int> binarySearch(long index) {

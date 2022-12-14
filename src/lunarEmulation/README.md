@@ -1,5 +1,5 @@
 ====================================
-README FOR LZROVERENGINE LUNAREMULATION SUBSYSTEM
+README FOR LZROVERENGINE LUNAR EMULATION SUBSYSTEM
 ====================================
 
 This subsystem is meant to be responsible for emulating everything that in a real mission scenario would be captured by the rover.
@@ -13,3 +13,5 @@ For debugging reasons, this subsystem also allows for a window to be created wit
 ====================================
 FOOTMARKS
 ====================================
+
+IDK MAN WHACKADOO YOUR PLOBLEM NOW >:)
