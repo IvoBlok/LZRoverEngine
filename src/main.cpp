@@ -21,11 +21,11 @@ int main(int argc, char const *argv[])
   std::vector<glm::vec3> newLocalNormals2;
 
   // local map data blocks
-  std::vector<long> recentlyActivatedVoxelIndices[15];
+  std::vector<long> recentlyActivatedVoxelIndices;
 
   // segmap classes initialization
   DVG localDVG;
-  DVG globalDVG;
+  std::vector<DVG> globalDVGs;
   NormalEstimator incrNormalEstimator;
 
   // startup
@@ -43,10 +43,22 @@ int main(int argc, char const *argv[])
     {
       // every given amount of measurements, copy the local map into the global map, and empty the local map for the next batch of measurements
       if(i % (8 * 25) == 0) {
-        globalDVG.copyAndRemoveDVG(localDVG);
+        globalDVGs.push_back(localDVG);
+        localDVG.empty();
 
-        for (size_t i = 0; i < 15; i++)
-          recentlyActivatedVoxelIndices[i].clear();
+        recentlyActivatedVoxelIndices.clear();
+
+        // Calculate segment correspondences
+        // .....
+
+        // Throw new relations into ISAM2, and retrieve the set of new transformation matrices
+        // .....
+
+        // Update the voxels in the globalDVGs with the new transformation matrices
+        // .....
+
+        // Update the transformation matrices stored in the globalDVGs, or something, not sure yet why they are also stored in the DVGs
+        // .....
       }
 
       // Calculate new IMU based rover location
@@ -60,6 +72,7 @@ int main(int argc, char const *argv[])
       glm::mat3 inverseInitPoseRot = glm::inverse(engine.getInitialRealPose().rotation);
       glm::vec3 initPoseTranslation = engine.getInitialRealPose().translation;
 
+      // transform depth measurements to estimated world space with pose estimate directly from pose measurement sensor
       for (size_t i = 0; i < depthData.pointclouds.size(); i++)
       {
         for (size_t j = 0; j < depthData.pointclouds[i].size(); j++)
@@ -78,33 +91,47 @@ int main(int argc, char const *argv[])
           depthData.pointclouds[i][j] = inverseInitPoseRot * depthData.pointclouds[i][j];
         }
       }
+
+      // Calculate the transformation from the new pointcloud with the estimated pose applied, to the current local map with partial ICP. 
+      // The resulting matrix is the result of noise in mainly the Pose measuring device. ICP inherently also doesn't get to the exact answer, but it should be enough for this application
+      // .....
+      
+      // Apply the newly found transformation matrix, and push the new pointcloud to the local DVG
+      // .....
+
       /* #endregion */
 
       // Update Local DVG and update the buffer layers of the new active voxels
-      for (size_t i = 0; i < 15 - 1; i++)
-        recentlyActivatedVoxelIndices[i] = recentlyActivatedVoxelIndices[i + 1];
-      
-      recentlyActivatedVoxelIndices[14] = localDVG.insertPoints(depthData.pointclouds);
+      localDVG.insertPoints(depthData.pointclouds, recentlyActivatedVoxelIndices);
 
       // Incremental Normal Estimation
-      incrNormalEstimator.calculateNormalsWithCovarianceMatrix(localDVG, recentlyActivatedVoxelIndices[10]);
+      std::vector<long> failedVoxels;
+      incrNormalEstimator.calculateNormalsWithCovarianceMatrix(localDVG, recentlyActivatedVoxelIndices, failedVoxels);
 
       // Incremental Segmentation
-      Segmentation::growGroundplaneClusters(localDVG, incrNormalEstimator, recentlyActivatedVoxelIndices[10]);
-      Segmentation::growObstacleClusters(localDVG, incrNormalEstimator, recentlyActivatedVoxelIndices[0]);
+      Segmentation::growGroundplaneClusters(localDVG, incrNormalEstimator, recentlyActivatedVoxelIndices);
+      Segmentation::growObstacleClusters(localDVG, incrNormalEstimator, recentlyActivatedVoxelIndices);
 
       // Incremental Feature Extraction
       // ....
 
+      // Get the failed voxels into the to be processed voxels list of next iteration
+      recentlyActivatedVoxelIndices.clear();
+      recentlyActivatedVoxelIndices = failedVoxels;
+
       // Visualization
       // ============================
-      // export Local and Glboal DVG To render engine for debug camera
+      // export LOCAL active voxels to render engine
       localDVG.getVoxelsForVisualization(activeVoxels);
       engine.setDVG(activeVoxels, 0);
-      globalDVG.getVoxelsForVisualization(activeVoxels);
+      
+      // export GLOBAL active voxels to render engine
+      activeVoxels.clear();
+      for (size_t i = 0; i < globalDVGs.size(); i++)
+        globalDVGs[i].getVoxelsForVisualization(activeVoxels, false, false);
       engine.setDVG(activeVoxels, 1, glm::vec3{1.f, 1.f, 0.f});
       
-      // visualize local normals
+      // export LOCAL normals to render engine
       Segmentation::loadNormalsIntoEngine(localDVG, engine);
     }
 

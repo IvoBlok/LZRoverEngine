@@ -22,16 +22,21 @@
 
 struct Voxel {
 public:
-  unsigned int pointCount;
+  unsigned short int pointCount;
   long index;
 
+  //! these bools can probably be combined into one 1 byte variable, and depending on which you need to some bit shifting for more efficient memory usage
   bool active = false;
+  // 'isPartOfCluster' is true if the voxel is attributed to a cluster that isn't a segment or if the voxel isn't attributed to any clusters. Finding which of the two is the case can be done by checking the if 'clusterID' is non-zero 
+  // 'isPartOfCluster' is false if the voxel is attributed to a cluster that IS a segment.
+  bool isPartOfCluster = true;
 
   glm::vec3 centroid;
-  glm::vec3 normal = glm::vec3{0.f, -1.f, 0.f};
+  glm::vec3 normal = glm::vec3{0.f};
 
-  // 0 clusterID is set to be the default, signalling that it is not part of any cluster/segment (yet)
-  int clusterID = 0;
+  // 0 clusterID is set to be the default, signalling that it is not part of any cluster/segment (yet).
+  // clusterID can correspond to the 'temporary' cluster identifier, or the 'permanent' segment identifier. Finding which option is true for a given voxel can be done by checking 'isPartOfCluster'
+  short int clusterID = 0;
 
   Voxel(unsigned int count_, glm::vec3 centroid_, long index_, glm::vec3 normal_) : pointCount(count_), centroid(centroid_), index(index_), normal(normal_) {}
 
@@ -57,6 +62,8 @@ public:
   // one has negative clusterID's, one positive, to differentiate them easier from a voxel.
   std::list<Cluster> groundplaneClusters;
   std::list<Cluster> obstacleClusters;
+
+  glm::mat4 transformationMatrix;
 
   // max 63, so the max value of a long is unique, and reserved for signaling non-initialized
   unsigned int lengthBitCount = 12;
@@ -108,11 +115,9 @@ public:
     return nullptr;
   }
 
-  bool insertPoint(glm::vec3& point, long& indexToSet, glm::mat4 transformationMatrix = glm::mat4{1.f}, unsigned int count = 1, glm::vec3 normal = glm::vec3{0.f}, int clusterID = 0) {
-    // apply transformation
-    glm::vec3 transformedPoint = transformationMatrix * glm::vec4{point, 1.f};
+  bool insertPoint(glm::vec3& point, long& indexToSet, unsigned int count = 1, glm::vec3 normal = glm::vec3{0.f}, int clusterID = 0) {
     
-    long index = getIndexFromPoint(transformedPoint);
+    long index = getIndexFromPoint(point);
 
     // calculate place in vector
     std::pair<bool, unsigned int> vectorLocation = binarySearch(index);
@@ -124,7 +129,7 @@ public:
       // update the pointCount to reflect the added point
       voxel.pointCount += count;
       // update the centroid (i.e. the average of the point positions within the voxel) with the new point position
-      voxel.centroid = ((float)(voxel.pointCount - 1) * voxel.centroid + transformedPoint) / (float)voxel.pointCount;
+      voxel.centroid = ((float)(voxel.pointCount - 1) * voxel.centroid + point) / (float)voxel.pointCount;
       
       if(voxel.pointCount - count < pointsRequiredForActiveVoxel && voxel.pointCount >= pointsRequiredForActiveVoxel) { voxel.active = true; indexToSet = index; return true; }
 
@@ -133,7 +138,7 @@ public:
       // make new voxel, update it's data and push insert it in the correct location
       Voxel voxel;
       voxel.pointCount = count;
-      voxel.centroid = transformedPoint;
+      voxel.centroid = point;
       voxel.index = index;
       voxel.clusterID = clusterID;
       voxel.normal = normal;
@@ -145,37 +150,46 @@ public:
     return false;
   }
 
-  bool insertPoint(glm::vec3& point, glm::mat4 transformationMatrix = glm::mat4{1.f}, unsigned int count = 1, glm::vec3 normal = glm::vec3{0.f}, int clusterID = 0) {
+  bool insertPoint(glm::vec3& point, unsigned int count = 1, glm::vec3 normal = glm::vec3{0.f}, int clusterID = 0) {
     long placeholderIndex;
-    return insertPoint(point, placeholderIndex, transformationMatrix, count, normal, clusterID);
+    return insertPoint(point, placeholderIndex, count, normal, clusterID);
   }
 
-  std::vector<long> insertPoints(std::vector<glm::vec3> points, glm::mat4 transformationMatrix = glm::mat4{1.f}) {
+  std::vector<long> insertPoints(std::vector<glm::vec3> points) {
     std::vector<long> newlyActiveVoxels;
     
     long index;
     for (size_t i = 0; i < points.size(); i++)
     {
-      if(insertPoint(points[i], index, transformationMatrix)) { newlyActiveVoxels.push_back(index); }
+      if(insertPoint(points[i], index)) { newlyActiveVoxels.push_back(index); }
     }
 
     return newlyActiveVoxels;
   }
 
-  std::vector<long> insertPoints(std::vector<std::vector<glm::vec3>> pointclouds, glm::mat4 transformationMatrix = glm::mat4{1.f}) {
+  std::vector<long> insertPoints(std::vector<std::vector<glm::vec3>> pointclouds) {
     std::vector<long> newlyActiveVoxels;
     for (size_t i = 0; i < pointclouds.size(); i++)
     {
-      std::vector<long> newVoxels = insertPoints(pointclouds[i], transformationMatrix);
+      std::vector<long> newVoxels = insertPoints(pointclouds[i]);
       newlyActiveVoxels.insert(newlyActiveVoxels.end(), newVoxels.begin(), newVoxels.end());
     }
     return newlyActiveVoxels;
   }
 
-  void insertPoints(DVG& dvg, glm::mat4 transformationMatrix = glm::mat4{1.f}) {
+  void insertPoints(std::vector<std::vector<glm::vec3>> pointclouds, std::vector<long>& newlyActiveVoxelList) {
+    for (size_t i = 0; i < pointclouds.size(); i++)
+    {
+      std::vector<long> newVoxels = insertPoints(pointclouds[i]);
+      newlyActiveVoxelList.insert(newlyActiveVoxelList.end(), newVoxels.begin(), newVoxels.end());
+    }
+    return;
+  }
+
+  void insertPoints(DVG& dvg) {
     for (size_t i = 0; i < dvg.voxels.size(); i++)
     {
-      insertPoint(dvg.voxels[i].centroid, transformationMatrix, dvg.voxels[i].pointCount, dvg.voxels[i].normal, dvg.voxels[i].clusterID);
+      insertPoint(dvg.voxels[i].centroid, dvg.voxels[i].pointCount, dvg.voxels[i].normal, dvg.voxels[i].clusterID);
     }
   }
 

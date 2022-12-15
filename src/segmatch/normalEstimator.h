@@ -17,6 +17,9 @@
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
+#define MIN_REQUIRED_NEIGHBOURS_FOR_NORMAL_CALCULATION 6
+#define NORMAL_ESTIMATION_NEIGHBOUR_SEARCH_RADIUS 2
+
 // Incremental normal estimation
 class NormalEstimator {
 public:
@@ -135,7 +138,9 @@ public:
     voxel = dvg.getVoxelFromIndex(index);
 
     // get the direct grid neighbours of the voxel, excluding the voxel itself
-    std::vector<Voxel*> neighbours = dvg.getNeighbours(index, 3);
+    std::vector<Voxel*> neighbours = dvg.getNeighbours(index, NORMAL_ESTIMATION_NEIGHBOUR_SEARCH_RADIUS);
+
+    if((int)neighbours.size() <= MIN_REQUIRED_NEIGHBOURS_FOR_NORMAL_CALCULATION) { return false; }
 
     // add a copy of the main voxel to the list/vector
     Voxel v{};
@@ -170,16 +175,12 @@ public:
     neighbours.pop_back();
     for (size_t i = 0; i < neighbours.size(); i++)
     {
-      //curvature += std::abs();
       glm::vec3 relativeVector = neighbours[i]->centroid - voxel->centroid;
       float sizeOfRelativeVec = std::pow(glm::length(relativeVector), 2);
       curvature += std::abs(glm::dot(relativeVector, voxel->normal)) * 1.f/sizeOfRelativeVec;
     }
-    if(neighbours.size() == 0) {
-      return false;
-    } else {
-      curvature /= (float)neighbours.size();
-    }
+
+    curvature /= (float)neighbours.size();
     return true;
   }
 
@@ -188,11 +189,17 @@ public:
     return calculateNormalWithCovarianceMatrix(dvg, index, placeholderCurvature);
   }
   
-  void calculateNormalsWithCovarianceMatrix(DVG& dvg, std::vector<long>& voxelIndices) {
+  void calculateNormalsWithCovarianceMatrix(DVG& dvg, std::vector<long>& voxelIndices, std::vector<long>& failedVoxels) {
+    std::vector<long> succesfulVoxels;
     for (size_t i = 0; i < voxelIndices.size(); i++)
     {
-      calculateNormalWithCovarianceMatrix(dvg, voxelIndices[i]);
+      if(calculateNormalWithCovarianceMatrix(dvg, voxelIndices[i]))
+        succesfulVoxels.push_back(voxelIndices[i]);
+      else 
+        failedVoxels.push_back(voxelIndices[i]);
     }
+    voxelIndices.clear();
+    voxelIndices = succesfulVoxels;
   }
 };
 

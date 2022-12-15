@@ -10,6 +10,8 @@
 
 #define CAN_GROW_TO_VOXEL_ANGLE_THRESHOLD 12.f
 #define MAX_ALLOWED_SEED_CURVATURE 0.15f
+#define CLUSTERING_GROUNDPLANE_NEIGHBOUR_SEARCH_RADIUS 3
+#define CLUSTERING_OBSTACLE_NEIGHBOUR_SEARCH_RADIUS 2
 
 namespace Segmentation {
 
@@ -120,7 +122,7 @@ namespace Segmentation {
       Voxel* seed = seeds.front(); seeds.pop_front();
       setClusterID(seed, dvg.groundplaneClusters, clusterIDCounterObstacles);
 
-      std::vector<Voxel*> neighbours = dvg.getNeighbours(dvg.getIndexFromPoint(seed->centroid), 3);
+      std::vector<Voxel*> neighbours = dvg.getNeighbours(dvg.getIndexFromPoint(seed->centroid), CLUSTERING_OBSTACLE_NEIGHBOUR_SEARCH_RADIUS);
 
       for (int j = 0; j < neighbours.size(); j++) {
         if(!isNotPartOfCluster(*neighbours[j], clusterIDCounterObstacles)) 
@@ -185,7 +187,7 @@ namespace Segmentation {
       Voxel* seed = seeds.front(); seeds.pop_front();
       setClusterID(seed, dvg.obstacleClusters, clusterIDCounterGroundplane);
 
-      std::vector<Voxel*> neighbours = dvg.getNeighbours(dvg.getIndexFromPoint(seed->centroid), 2);
+      std::vector<Voxel*> neighbours = dvg.getNeighbours(dvg.getIndexFromPoint(seed->centroid), CLUSTERING_OBSTACLE_NEIGHBOUR_SEARCH_RADIUS);
       
       for (int j = 0; j < neighbours.size(); j++) {
         // filter out neighbours in ground plane
@@ -233,7 +235,6 @@ namespace Segmentation {
 
   // debug/visualization functions
   // ============================================
-
   void loadNormalsIntoEngine(DVG& dvg, LZEngine& engine) {
     // horrible algorithm for visualization, scales terribly with time
     int index = 0;
