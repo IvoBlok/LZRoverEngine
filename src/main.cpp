@@ -132,7 +132,7 @@ int main(int argc, char const *argv[])
       engine.setDVG(activeVoxels, 1, glm::vec3{1.f, 1.f, 0.f});
       
       // export LOCAL normals to render engine
-      Segmentation::loadNormalsIntoEngine(localDVG, engine);
+      Segmentation::loadClusterNormalsIntoEngine(localDVG, engine);
     }
 
     // render for debugging camera

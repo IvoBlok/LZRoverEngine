@@ -37,7 +37,8 @@ namespace Segmentation {
 
   // check if two adjacent voxels follow the criteria for being in the same cluster
   bool canGrowFromVoxelToVoxel(Voxel& voxel1, Voxel& voxel2) {
-    return std::acos(glm::abs(glm::dot(glm::normalize(voxel1.normal), glm::normalize(voxel2.normal)))) * (360.f / 6.28f) < CAN_GROW_TO_VOXEL_ANGLE_THRESHOLD;
+    return voxel1.normal != glm::vec3{0.f} && voxel2.normal != glm::vec3{0.f} &&
+      std::acos(glm::abs(glm::dot(glm::normalize(voxel1.normal), glm::normalize(voxel2.normal)))) * (360.f / 6.28f) < CAN_GROW_TO_VOXEL_ANGLE_THRESHOLD;
   }
 
   // check if a given voxel is already part of a cluster
@@ -235,48 +236,51 @@ namespace Segmentation {
 
   // debug/visualization functions
   // ============================================
-  void loadNormalsIntoEngine(DVG& dvg, LZEngine& engine) {
+  void loadClusterNormalsIntoEngine(std::vector<DVG>& dvgs, LZEngine& engine) {
     // horrible algorithm for visualization, scales terribly with time
     int index = 0;
-    for (auto cluster = dvg.groundplaneClusters.rbegin(); cluster != dvg.groundplaneClusters.rend(); cluster++) {
-      // if a new cluster has been added since last time, make a new line rendering group
-      if(index >= engine.linesObjects.size()) { 
-        engine.linesObjects.push_back(LineMesh{}); 
-        engine.linesObjects[index].color = glm::vec3{(float)rand()/(float)RAND_MAX, 0.f, 0.f};
+    for (auto dvg = dvgs.begin(); dvg != dvgs.end(); dvg++) {
+      for (auto cluster = dvg->groundplaneClusters.rbegin(); cluster != dvg->groundplaneClusters.rend(); cluster++) {
+        // if a new cluster has been added since last time, make a new line rendering group
+        if(index >= engine.linesObjects.size()) { 
+          engine.linesObjects.push_back(LineMesh{}); 
+          engine.linesObjects[index].color = glm::vec3{(float)rand()/(float)RAND_MAX, 0.f, 0.f};
+        }
+
+        // load the normals for the current cluster
+        std::vector<glm::vec3> normals;
+        for (size_t j = 0; j < cluster->voxelIndices.size(); j++)
+        {
+          Voxel* voxel = dvg->getVoxelFromIndex(cluster->voxelIndices[j]);
+          normals.push_back(voxel->centroid);
+          normals.push_back(voxel->normal);
+        }
+        
+        engine.linesObjects[index].setLines(normals, 0.1f);
+        index++;
       }
 
-      // load the normals for the current cluster
-      std::vector<glm::vec3> normals;
-      for (size_t j = 0; j < cluster->voxelIndices.size(); j++)
-      {
-        Voxel* voxel = dvg.getVoxelFromIndex(cluster->voxelIndices[j]);
-        normals.push_back(voxel->centroid);
-        normals.push_back(voxel->normal);
+      for (auto cluster = dvg->obstacleClusters.rbegin(); cluster != dvg->obstacleClusters.rend(); cluster++) {
+        // if a new cluster has been added since last time, make a new line rendering group
+        if(index >= engine.linesObjects.size()) { 
+          engine.linesObjects.push_back(LineMesh{}); 
+          engine.linesObjects[index].color = glm::vec3{0.f, (float)rand()/(float)RAND_MAX, (float)rand()/(float)RAND_MAX};
+        }
+
+        // load the normals for the current cluster
+        std::vector<glm::vec3> normals;
+        for (size_t j = 0; j < cluster->voxelIndices.size(); j++)
+        {
+          Voxel* voxel = dvg->getVoxelFromIndex(cluster->voxelIndices[j]);
+          normals.push_back(voxel->centroid);
+          normals.push_back(voxel->normal);
+        }
+        
+        engine.linesObjects[index].setLines(normals, 0.1f);
+        index++;
       }
-      
-      engine.linesObjects[index].setLines(normals, 0.1f);
-      index++;
     }
 
-    for (auto cluster = dvg.obstacleClusters.rbegin(); cluster != dvg.obstacleClusters.rend(); cluster++) {
-      // if a new cluster has been added since last time, make a new line rendering group
-      if(index >= engine.linesObjects.size()) { 
-        engine.linesObjects.push_back(LineMesh{}); 
-        engine.linesObjects[index].color = glm::vec3{0.f, (float)rand()/(float)RAND_MAX, (float)rand()/(float)RAND_MAX};
-      }
-
-      // load the normals for the current cluster
-      std::vector<glm::vec3> normals;
-      for (size_t j = 0; j < cluster->voxelIndices.size(); j++)
-      {
-        Voxel* voxel = dvg.getVoxelFromIndex(cluster->voxelIndices[j]);
-        normals.push_back(voxel->centroid);
-        normals.push_back(voxel->normal);
-      }
-      
-      engine.linesObjects[index].setLines(normals, 0.1f);
-      index++;
-    }
 
     // pop those rendering groups that are left over from previous iterations due to cluster merges in the current iteration
     for (size_t i = index; i < engine.linesObjects.size(); i++)
@@ -284,6 +288,13 @@ namespace Segmentation {
       engine.linesObjects.pop_back();
     }
   }
+
+  void loadClusterNormalsIntoEngine(DVG& dvg, LZEngine& engine) {
+    std::vector<DVG> dvgs;
+    dvgs.push_back(dvg);
+    loadClusterNormalsIntoEngine(dvgs, engine);
+  }
+
 
   void displayClusterSizes(DVG& dvg) {
     for (auto cluster = dvg.obstacleClusters.rbegin(); cluster != dvg.obstacleClusters.rend(); cluster++) {
