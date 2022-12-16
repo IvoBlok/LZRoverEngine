@@ -12,6 +12,7 @@
 #define MAX_ALLOWED_SEED_CURVATURE 0.15f
 #define CLUSTERING_GROUNDPLANE_NEIGHBOUR_SEARCH_RADIUS 3
 #define CLUSTERING_OBSTACLE_NEIGHBOUR_SEARCH_RADIUS 2
+#define MIN_VOXEL_COUNT_TO_BECOME_SEGMENT 10
 
 namespace Segmentation {
 
@@ -19,17 +20,24 @@ namespace Segmentation {
   private:
     int clusterIDCounterObstacles = 0;
     int clusterIDCounterGroundplane = 0;
+
+    int segmentIDCounterObstacles = 0;
+    int segmentIDCounterGroundplane = 0;
+    
   public:
     int getNewObstacleClusterID() { return ++clusterIDCounterObstacles; }
     int getNewGroundplaneClusterID() { return --clusterIDCounterGroundplane; }
+
+    int getNewObstacleSegmentID() { return ++segmentIDCounterObstacles; }
+    int getNewGroundplaneSegmentID() { return --segmentIDCounterGroundplane; }
   };
   ClusterIDGenerator clusterIDGen;
 
   // check if a given voxel can be a seed to start growing a cluster from
-  bool canBeSeed(DVG& dvg, NormalEstimator& normalEstimator,  Voxel* voxel) {
+  bool canBeSeed(DVG& dvg, Voxel* voxel) {
     // check if curvature is below some limit
     float curvature;
-    if(normalEstimator.calculateNormalWithCovarianceMatrix(dvg, voxel->index, curvature)) {
+    if(NormalEstimator::calculateNormalWithCovarianceMatrix(dvg, voxel->index, curvature)) {
       return curvature < (float)MAX_ALLOWED_SEED_CURVATURE;
     }
     return false;
@@ -107,7 +115,7 @@ namespace Segmentation {
     voxel->clusterID = clusterID;
   }
 
-  void growGroundplaneFromSeed(DVG& dvg, NormalEstimator& normalEstimator, Voxel* voxel) {
+  void growGroundplaneFromSeed(DVG& dvg, Voxel* voxel) {
     // check if the initial seed is already in a cluster
     if(voxel->clusterID != 0)
       return;
@@ -139,7 +147,7 @@ namespace Segmentation {
             setClusterID(neighbours[j], dvg.groundplaneClusters, clusterIDCounterObstacles);
 
             // check if the neighbour of the current seed can by itself be a seed, potentially further growing the cluster
-            if(canBeSeed(dvg, normalEstimator, neighbours[j]))
+            if(canBeSeed(dvg, neighbours[j]))
               // a union check, as given in the paper this is based on, doesn't seem necessary given that we already know that it hasn't been part of cluster yet, 
               // and given that all seeds all automatically pushed to a cluster, all neighbours that pass the previous tests won't have been a seed before
               seeds.push_back(neighbours[j]); 
@@ -149,7 +157,7 @@ namespace Segmentation {
     }
   }
 
-  void growGroundplaneClusters(DVG& dvg, NormalEstimator& normalEstimator, std::vector<long> newActiveVoxelIndices) {
+  void growGroundplaneClusters(DVG& dvg, std::vector<long> newActiveVoxelIndices) {
     if(newActiveVoxelIndices.size() == 0) {
       return;
     }
@@ -157,7 +165,7 @@ namespace Segmentation {
     std::vector<Voxel*> seeds;
     for (size_t i = 0; i < newActiveVoxelIndices.size(); i++) {
       Voxel* voxel = dvg.getVoxelFromIndex(newActiveVoxelIndices[i]); 
-      if(canBeSeed(dvg, normalEstimator, voxel))
+      if(canBeSeed(dvg, voxel))
         seeds.push_back(voxel);
     }
     
@@ -167,11 +175,11 @@ namespace Segmentation {
     // grow new clusters from every seed
     for (size_t i = 0; i < seeds.size(); i++)
     {
-      growGroundplaneFromSeed(dvg, normalEstimator, seeds[i]);
+      growGroundplaneFromSeed(dvg, seeds[i]);
     }
   }
 
-  void growObstaclesFromSeed(DVG& dvg, NormalEstimator& normalEstimator, Voxel* voxel) {
+  void growObstaclesFromSeed(DVG& dvg, Voxel* voxel) {
     // check if the initial seed is already in a cluster
     if(voxel->clusterID != 0)
       return;
@@ -212,7 +220,7 @@ namespace Segmentation {
     }
   }
 
-  void growObstacleClusters(DVG& dvg, NormalEstimator& normalEstimator, std::vector<long> newActiveVoxelIndices) {
+  void growObstacleClusters(DVG& dvg, std::vector<long> newActiveVoxelIndices) {
     if(newActiveVoxelIndices.size() == 0) {
       return;
     }
@@ -230,7 +238,7 @@ namespace Segmentation {
     // grow new clusters from every seed
     for (size_t i = 0; i < seeds.size(); i++)
     {
-      growObstaclesFromSeed(dvg, normalEstimator, seeds[i]);
+      growObstaclesFromSeed(dvg, seeds[i]);
     }
   }
 

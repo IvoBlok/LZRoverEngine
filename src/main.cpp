@@ -26,7 +26,6 @@ int main(int argc, char const *argv[])
   // segmap classes initialization
   DVG localDVG;
   std::vector<DVG> globalDVGs;
-  NormalEstimator incrNormalEstimator;
 
   // startup
   engine.startEngine();
@@ -106,14 +105,21 @@ int main(int argc, char const *argv[])
 
       // Incremental Normal Estimation
       std::vector<long> failedVoxels;
-      incrNormalEstimator.calculateNormalsWithCovarianceMatrix(localDVG, recentlyActivatedVoxelIndices, failedVoxels);
+      NormalEstimator::calculateNormalsWithCovarianceMatrix(localDVG, recentlyActivatedVoxelIndices, failedVoxels);
 
       // Incremental Segmentation
-      Segmentation::growGroundplaneClusters(localDVG, incrNormalEstimator, recentlyActivatedVoxelIndices);
-      Segmentation::growObstacleClusters(localDVG, incrNormalEstimator, recentlyActivatedVoxelIndices);
+      Segmentation::growGroundplaneClusters(localDVG, recentlyActivatedVoxelIndices);
+      Segmentation::growObstacleClusters(localDVG, recentlyActivatedVoxelIndices);
 
       // Incremental Feature Extraction
-      // ....
+      // .....
+
+      // 2D project groundplane clusters into mesh / image / smth
+      // .....
+
+      // Check if a navigation update is necessary, and if yes, calculate the new path
+      // .....
+
 
       // Get the failed voxels into the to be processed voxels list of next iteration
       recentlyActivatedVoxelIndices.clear();

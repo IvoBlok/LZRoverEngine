@@ -21,8 +21,7 @@
 #define NORMAL_ESTIMATION_NEIGHBOUR_SEARCH_RADIUS 2
 
 // Incremental normal estimation
-class NormalEstimator {
-public:
+namespace NormalEstimator {
   using Scalar = typename Eigen::Matrix3f::Scalar;
 
   glm::mat3 calculateCovarianceMatrix(std::vector<Voxel*>& voxels) {

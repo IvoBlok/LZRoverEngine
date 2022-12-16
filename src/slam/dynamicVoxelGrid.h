@@ -46,6 +46,7 @@ public:
 
 struct Cluster {
   int ID;
+  bool isSegment = false;
   std::vector<long> voxelIndices;
 
   Cluster(int id) {
