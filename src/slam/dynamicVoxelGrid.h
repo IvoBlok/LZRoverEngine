@@ -27,9 +27,9 @@ public:
 
   //! these bools can probably be combined into one 1 byte variable, and depending on which you need to some bit shifting for more efficient memory usage
   bool active = false;
-  // 'isPartOfCluster' is true if the voxel is attributed to a cluster that isn't a segment or if the voxel isn't attributed to any clusters. Finding which of the two is the case can be done by checking the if 'clusterID' is non-zero 
-  // 'isPartOfCluster' is false if the voxel is attributed to a cluster that IS a segment.
-  bool isPartOfCluster = true;
+  // 'isPartOfSegment' is false if the voxel is attributed to a cluster that isn't a segment or if the voxel isn't attributed to any clusters. Finding which of the two is the case can be done by checking the if 'clusterID' is non-zero 
+  // 'isPartOfSegment' is true if the voxel is attributed to a cluster that IS a segment.
+  bool isPartOfSegment = false;
 
   glm::vec3 centroid;
   glm::vec3 normal = glm::vec3{0.f};
@@ -73,9 +73,9 @@ public:
   unsigned int heightBitCount = 8;
 
   // scaling factor of the coordinates. conversion to voxel side length in world space = 1.f / (float)resolution
-  float resolution = 20;
+  float resolution = 40;
   // minimum amount of points required in a voxel to make it active
-  unsigned int pointsRequiredForActiveVoxel = 7;
+  unsigned int pointsRequiredForActiveVoxel = 2;
 
   std::pair<bool, unsigned int> binarySearch(long index) {
     if (voxels.size() == 0 || voxels[0].index > index) {return {false, 0}; }

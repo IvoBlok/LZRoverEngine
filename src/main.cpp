@@ -9,7 +9,7 @@ int main(int argc, char const *argv[])
 {
 
   // Engine responsible for sensor emulation and debug window
-  LZEngine engine{120, 90};
+  LZEngine engine{160, 120};
 
   // sensor data package definitions
   RoverDepthDataPackage depthData;
@@ -120,7 +120,6 @@ int main(int argc, char const *argv[])
       // Check if a navigation update is necessary, and if yes, calculate the new path
       // .....
 
-
       // Get the failed voxels into the to be processed voxels list of next iteration
       recentlyActivatedVoxelIndices.clear();
       recentlyActivatedVoxelIndices = failedVoxels;
@@ -128,14 +127,14 @@ int main(int argc, char const *argv[])
       // Visualization
       // ============================
       // export LOCAL active voxels to render engine
-      localDVG.getVoxelsForVisualization(activeVoxels);
-      engine.setDVG(activeVoxels, 0);
+      //localDVG.getVoxelsForVisualization(activeVoxels);
+      //engine.setDVG(activeVoxels, 0);
       
       // export GLOBAL active voxels to render engine
-      activeVoxels.clear();
-      for (size_t i = 0; i < globalDVGs.size(); i++)
-        globalDVGs[i].getVoxelsForVisualization(activeVoxels, false, false);
-      engine.setDVG(activeVoxels, 1, glm::vec3{1.f, 1.f, 0.f});
+      //activeVoxels.clear();
+      //for (size_t i = 0; i < globalDVGs.size(); i++)
+      //  globalDVGs[i].getVoxelsForVisualization(activeVoxels, false, false);
+      //engine.setDVG(activeVoxels, 1, glm::vec3{1.f, 1.f, 0.f});
       
       // export LOCAL normals to render engine
       Segmentation::loadClusterNormalsIntoEngine(localDVG, engine);

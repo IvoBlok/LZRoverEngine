@@ -11,7 +11,6 @@ struct SensorPositioning {
   glm::vec3 relativeFront;
 };
 
-//TODO: This needs to support loading of .obj or similar
 // this also needs future proofed thingy for stuff like moving legs, so it'll have to consist of a set of meshes
 class Rover : public Model {
 public:

@@ -17,7 +17,7 @@
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-#define MIN_REQUIRED_NEIGHBOURS_FOR_NORMAL_CALCULATION 6
+#define MIN_REQUIRED_NEIGHBOURS_FOR_NORMAL_CALCULATION 8
 #define NORMAL_ESTIMATION_NEIGHBOUR_SEARCH_RADIUS 2
 
 // Incremental normal estimation

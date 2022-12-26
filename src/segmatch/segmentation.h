@@ -9,10 +9,10 @@
 #include <map>
 
 #define CAN_GROW_TO_VOXEL_ANGLE_THRESHOLD 12.f
-#define MAX_ALLOWED_SEED_CURVATURE 0.15f
-#define CLUSTERING_GROUNDPLANE_NEIGHBOUR_SEARCH_RADIUS 3
-#define CLUSTERING_OBSTACLE_NEIGHBOUR_SEARCH_RADIUS 2
-#define MIN_VOXEL_COUNT_TO_BECOME_SEGMENT 10
+#define MAX_ALLOWED_SEED_CURVATURE 0.18f
+#define CLUSTERING_GROUNDPLANE_NEIGHBOUR_SEARCH_RADIUS 2
+#define CLUSTERING_OBSTACLE_NEIGHBOUR_SEARCH_RADIUS 1
+#define MIN_VOXEL_COUNT_TO_BECOME_SEGMENT 10000
 
 namespace Segmentation {
 
@@ -58,10 +58,10 @@ namespace Segmentation {
     return voxel.clusterID != clusterID;
   }
 
-  bool getClusterByID(std::list<Cluster>& clusters, int clusterID, std::reverse_iterator<std::list<Cluster>::iterator>& cluster, int* indexInClusters ) {
+  bool getClusterByID(std::list<Cluster>& clusters, int clusterID, std::reverse_iterator<std::list<Cluster>::iterator>& cluster, int* indexInClusters, bool isSegment = false ) {
     int index = clusters.size() - 1;
     for (auto element = clusters.rbegin(); element != clusters.rend(); element++) {
-      if(element->ID == clusterID) {
+      if(element->ID == clusterID && element->isSegment == isSegment) {
         cluster = element;
         if(indexInClusters != nullptr) { *indexInClusters = index; }
         return true;
@@ -71,11 +71,26 @@ namespace Segmentation {
     return false;
   }
 
+  void convertClusterToSegment(DVG& dvg, std::reverse_iterator<std::list<Cluster>::iterator> cluster) {
+    cluster->isSegment = true;
+    if(cluster->ID < 0) { cluster->ID = clusterIDGen.getNewGroundplaneSegmentID(); } 
+    else { cluster->ID = clusterIDGen.getNewObstacleSegmentID(); }
+
+    for (size_t i = 0; i < cluster->voxelIndices.size(); i++)
+    {
+      Voxel* voxel =dvg.getVoxelFromIndex(cluster->voxelIndices[i]);
+      voxel->isPartOfSegment = true;
+      voxel->clusterID = cluster->ID;
+    }
+  }
+
   // copy over all elements of one cluster to a given other, and remove the copied cluster from the list
-  // TODO potentially make this function itself choose which of the given clusters should be removed, based on the ID, and thus its age
-  bool mergeClusters(DVG& dvg, std::list<Cluster>& clusters, int clusterIDOfClusterToStay, int clusterIDToMergeAndRemove) {
-    if(clusterIDOfClusterToStay == clusterIDToMergeAndRemove) 
+  bool mergeClusters(DVG& dvg, std::list<Cluster>& clusters, int clusterIDOfClusterToStay, bool clusterToStayIsSegment, int clusterIDToMergeAndRemove, bool clusterToMergeAndRemoveIsSegment) {
+    if(clusterIDOfClusterToStay == clusterIDToMergeAndRemove && clusterToStayIsSegment == clusterToMergeAndRemoveIsSegment) 
       return false;
+
+    bool switchClusterId = (clusterToMergeAndRemoveIsSegment == true && clusterToStayIsSegment == false) 
+                        || (clusterToMergeAndRemoveIsSegment == true && clusterToStayIsSegment == true && std::abs(clusterIDOfClusterToStay) < std::abs(clusterIDToMergeAndRemove)); 
 
     // find the pointers to the clusters in question
     std::reverse_iterator<std::list<Cluster>::iterator> clusterToCopyOver;
@@ -83,8 +98,8 @@ namespace Segmentation {
 
     int indexOfClusterToRemove = 0;
 
-    if(!getClusterByID(clusters, clusterIDToMergeAndRemove, clusterToCopyOver, &indexOfClusterToRemove)) { return false; }
-    if(!getClusterByID(clusters, clusterIDOfClusterToStay, clusterToCopyTo, nullptr)) { return false; }
+    if(!getClusterByID(clusters, clusterIDToMergeAndRemove, clusterToCopyOver, &indexOfClusterToRemove, clusterToMergeAndRemoveIsSegment)) { return false; }
+    if(!getClusterByID(clusters, clusterIDOfClusterToStay, clusterToCopyTo, nullptr, clusterToStayIsSegment)) { return false; }
 
     // copy over the data and update the clusterID of the voxels in the cluster that is soon to be removed
     for (size_t i = 0; i < clusterToCopyOver->voxelIndices.size(); i++)
@@ -92,7 +107,15 @@ namespace Segmentation {
       clusterToCopyTo->voxelIndices.push_back(clusterToCopyOver->voxelIndices[i]);
       dvg.getVoxelFromIndex(clusterToCopyOver->voxelIndices[i])->clusterID = clusterToCopyTo->ID;
     }
-    
+
+    if(switchClusterId)
+      for (size_t i = 0; i < clusterToCopyOver->voxelIndices.size(); i++)
+        dvg.getVoxelFromIndex(clusterToCopyOver->voxelIndices[i])->clusterID = clusterToCopyOver->ID;
+
+    // check if the merge has pushed the cluster over the minimum voxel count to become a segment
+    if(!clusterToCopyTo->isSegment && clusterToCopyTo->voxelIndices.size() >= MIN_VOXEL_COUNT_TO_BECOME_SEGMENT)
+      convertClusterToSegment(dvg, clusterToCopyTo);
+
     // remove the copied cluster
     std::list<Cluster>::iterator iterator = clusters.begin();
     std::advance(iterator, indexOfClusterToRemove);
@@ -102,15 +125,19 @@ namespace Segmentation {
 
   // update a voxels cluster state, updating both places where the cluster voxel relation is stored
   //! does not check if the given voxel is already in the given cluster, given that the only implementation it is used doesn't require it
-  void setClusterID(Voxel* voxel, std::list<Cluster>& clusters, int clusterID) {
+  void setClusterID(DVG& dvg, Voxel* voxel, std::list<Cluster>& clusters, int clusterID, bool isSegment = false) {
     // update the global list of clusters with a new entry
     std::reverse_iterator<std::list<Cluster>::iterator> cluster;
-    if(!getClusterByID(clusters, clusterID, cluster, nullptr)) {
+    if(!getClusterByID(clusters, clusterID, cluster, nullptr, isSegment)) {
       std::cout << "ERROR: Invalid clusterID given!\n";
       return;
     }
     cluster->voxelIndices.push_back(voxel->index);
-
+    
+    // if this addition of a voxel to the cluster means that the cluster has reached the segment threshold, convert it to a segment
+    if(cluster->voxelIndices.size() == MIN_VOXEL_COUNT_TO_BECOME_SEGMENT) {
+      convertClusterToSegment(dvg, cluster);
+    }
     // update the clusterID of the voxel (supposedly) in the DVG
     voxel->clusterID = clusterID;
   }
@@ -121,30 +148,35 @@ namespace Segmentation {
       return;
 
     // get a new unique cluster ID
-    int clusterIDCounterObstacles = clusterIDGen.getNewObstacleClusterID();
+    int newGroundplaneClusterID = clusterIDGen.getNewGroundplaneClusterID();
 
     // initialize seeds list and new cluster
     std::list<Voxel*> seeds = {voxel};
-    dvg.groundplaneClusters.push_back(Cluster{clusterIDCounterObstacles});
+    dvg.groundplaneClusters.push_back(Cluster{newGroundplaneClusterID});
 
     while(seeds.size() > 0) {
       Voxel* seed = seeds.front(); seeds.pop_front();
-      setClusterID(seed, dvg.groundplaneClusters, clusterIDCounterObstacles);
+      setClusterID(dvg, seed, dvg.groundplaneClusters, newGroundplaneClusterID, voxel->isPartOfSegment);
 
-      std::vector<Voxel*> neighbours = dvg.getNeighbours(dvg.getIndexFromPoint(seed->centroid), CLUSTERING_OBSTACLE_NEIGHBOUR_SEARCH_RADIUS);
+      std::vector<Voxel*> neighbours = dvg.getNeighbours(dvg.getIndexFromPoint(seed->centroid), CLUSTERING_GROUNDPLANE_NEIGHBOUR_SEARCH_RADIUS);
 
       for (int j = 0; j < neighbours.size(); j++) {
-        if(!isNotPartOfCluster(*neighbours[j], clusterIDCounterObstacles)) 
+        // check if the neighbour isn't already part of the new cluster
+        if(!isNotPartOfCluster(*neighbours[j], newGroundplaneClusterID)) 
+          continue;
+
+        // check if the neighbour isn't already part of an obstacle cluster
+        if(neighbours[j]->clusterID > 0)
           continue;
 
         // check if the seed can grow to the neighbour
         if(canGrowFromVoxelToVoxel(*seed, *neighbours[j])) {
           if(isPartOfCluster(*neighbours[j])) {
             // if the neighbour to grow towards already is assigned a cluster, the clusters should be merged into one
-            mergeClusters(dvg, dvg.groundplaneClusters, clusterIDCounterObstacles, neighbours[j]->clusterID);
+            mergeClusters(dvg, dvg.groundplaneClusters, newGroundplaneClusterID, voxel->isPartOfSegment, neighbours[j]->clusterID, neighbours[j]->isPartOfSegment);
           } else {
             // if the neighbour to grow towards isn't part of a cluster, add it to cluster that the seed belongs to
-            setClusterID(neighbours[j], dvg.groundplaneClusters, clusterIDCounterObstacles);
+            setClusterID(dvg, neighbours[j], dvg.groundplaneClusters, newGroundplaneClusterID, voxel->isPartOfSegment);
 
             // check if the neighbour of the current seed can by itself be a seed, potentially further growing the cluster
             if(canBeSeed(dvg, neighbours[j]))
@@ -188,33 +220,31 @@ namespace Segmentation {
     std::list<Voxel*> seeds = {voxel};
     
     // get a new unique cluster ID
-    int clusterIDCounterGroundplane = clusterIDGen.getNewGroundplaneClusterID();
+    int newObstacleClusterID = clusterIDGen.getNewObstacleClusterID();
 
-    dvg.obstacleClusters.push_back(Cluster{clusterIDCounterGroundplane});
+    dvg.obstacleClusters.push_back(Cluster{newObstacleClusterID});
 
     while(seeds.size() > 0) {
       Voxel* seed = seeds.front(); seeds.pop_front();
-      setClusterID(seed, dvg.obstacleClusters, clusterIDCounterGroundplane);
+      setClusterID(dvg, seed, dvg.obstacleClusters, newObstacleClusterID, voxel->isPartOfSegment);
 
       std::vector<Voxel*> neighbours = dvg.getNeighbours(dvg.getIndexFromPoint(seed->centroid), CLUSTERING_OBSTACLE_NEIGHBOUR_SEARCH_RADIUS);
       
       for (int j = 0; j < neighbours.size(); j++) {
-        // filter out neighbours in ground plane
-        //TODO Assuming here that the programs found the largest cluster to be the ground plane, which is very much not a given
-
-        if(!isNotPartOfCluster(*neighbours[j], clusterIDCounterGroundplane)) 
+        // filter out neighbours that are already part of the new cluster
+        if(!isNotPartOfCluster(*neighbours[j], newObstacleClusterID)) 
           continue;
 
         // filter out ground plane neighbours
-        if(neighbours[j]->clusterID > 0)
+        if(neighbours[j]->clusterID < 0)
           continue;
 
         if(isPartOfCluster(*neighbours[j])) {
           // if the neighbour to grow towards already is assigned a cluster, the clusters should be merged into one
-          mergeClusters(dvg, dvg.obstacleClusters, clusterIDCounterGroundplane, neighbours[j]->clusterID);
+          mergeClusters(dvg, dvg.obstacleClusters, newObstacleClusterID, voxel->isPartOfSegment, neighbours[j]->clusterID, neighbours[j]->isPartOfSegment);
         } else {
           // if the neighbour to grow towards isn't part of a cluster, add it to cluster that the seed belongs to
-          setClusterID(neighbours[j], dvg.obstacleClusters, clusterIDCounterGroundplane);
+          setClusterID(dvg, neighbours[j], dvg.obstacleClusters, newObstacleClusterID, voxel->isPartOfSegment);
         }
       }
     }
@@ -224,7 +254,7 @@ namespace Segmentation {
     if(newActiveVoxelIndices.size() == 0) {
       return;
     }
-    // get seeds from newly active voxels
+    // get seeds from newly active voxels that haven't been clustered into a groundplane cluster yet
     std::vector<Voxel*> seeds;
     for (size_t i = 0; i < newActiveVoxelIndices.size(); i++) {
       Voxel* voxel = dvg.getVoxelFromIndex(newActiveVoxelIndices[i]); 
@@ -232,9 +262,6 @@ namespace Segmentation {
         seeds.push_back(voxel);
     }
     
-    // sort them by curvature
-    // TODO
-
     // grow new clusters from every seed
     for (size_t i = 0; i < seeds.size(); i++)
     {
@@ -303,14 +330,11 @@ namespace Segmentation {
     loadClusterNormalsIntoEngine(dvgs, engine);
   }
 
-
   void displayClusterSizes(DVG& dvg) {
     for (auto cluster = dvg.obstacleClusters.rbegin(); cluster != dvg.obstacleClusters.rend(); cluster++) {
       std::cout << cluster->voxelIndices.size() << " : " << cluster->ID << std::endl;
     }
     std::cout << std::endl;
   }
-
 }
-
 #endif
