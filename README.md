@@ -78,7 +78,7 @@ A set of functions enabling the loading of a large set of 3D-model file formats.
 
 ```$ sudo apt-get install libassimp-dev```
 
-FIRST COMPILATION GUIDE
+RUNNING THE PROGRAM
 ====================================
 
 After git cloning the repository, cd to LZRoverEngine/, and make a new build directory
@@ -103,7 +103,10 @@ To execute the project, run the compiled executable
 
 ```$ ./LZRoverEngine```
 
+If after taking these steps, a change is made to the source code, only the last two steps are needed to run the updated source code.
+
 QUESTIONS / HELP
+====================================
 
 As a horrible way of futureproofing, if you happened to be working with or on this project and you have a serious problem, feel free to mail me:
  - ivoblokdoorn@gmail.com
