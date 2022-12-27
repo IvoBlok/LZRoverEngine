@@ -27,9 +27,6 @@ public:
 
   //! these bools can probably be combined into one 1 byte variable, and depending on which you need to some bit shifting for more efficient memory usage
   bool active = false;
-  // 'isPartOfSegment' is false if the voxel is attributed to a cluster that isn't a segment or if the voxel isn't attributed to any clusters. Finding which of the two is the case can be done by checking the if 'clusterID' is non-zero 
-  // 'isPartOfSegment' is true if the voxel is attributed to a cluster that IS a segment.
-  bool isPartOfSegment = false;
 
   glm::vec3 centroid;
   glm::vec3 normal = glm::vec3{0.f};
