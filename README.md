@@ -1,4 +1,3 @@
-====================================
 README FOR LZROVERENGINE 
 ====================================
 
@@ -23,6 +22,7 @@ these techniques are inspired, and if not just copied from a series of closely r
  - 'Incremental Segment-Based Localization in 3D Point Clouds' 
 
 INSTALLATION
+====================================
 
 This software has only been tested on Ubuntu 20.04+, but is likely to work on any linux system, and with some extra dependency linking efforts, it should also be possible to get it running within Windows.
 
@@ -79,6 +79,7 @@ A set of functions enabling the loading of a large set of 3D-model file formats.
 ```$ sudo apt-get install libassimp-dev```
 
 FIRST COMPILATION GUIDE
+====================================
 
 After git cloning the repository, cd to LZRoverEngine/, and make a new build directory
 
