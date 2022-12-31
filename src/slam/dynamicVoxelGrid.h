@@ -8,6 +8,7 @@
 #include <iterator>
 #include <memory>
 #include <list>
+#include <utility>
 
 #include <fstream>
 #include <iostream>
@@ -25,7 +26,6 @@ public:
   unsigned short int pointCount;
   long index;
 
-  //! these bools can probably be combined into one 1 byte variable, and depending on which you need to some bit shifting for more efficient memory usage
   bool active = false;
 
   glm::vec3 centroid;
@@ -33,7 +33,7 @@ public:
 
   // 'clusterID' is set to 0 as the default, signalling that it is not part of any cluster/segment (yet).
   // 'clusterID' is negative non-zero if it's part of a groundplane cluster, and positive non-zero if it's part of a obstacle cluster
-  // 'clusterID' can correspond to the 'temporary' cluster identifier, or the 'permanent' segment identifier. Finding which option is true for a given voxel can be done by checking 'isPartOfCluster'
+  // 'clusterID' can correspond to the 'temporary' cluster identifier, or the 'permanent' segment identifier. 
   short int clusterID = 0;
 
   Voxel(unsigned int count_, glm::vec3 centroid_, long index_, glm::vec3 normal_) : pointCount(count_), centroid(centroid_), index(index_), normal(normal_) {}
@@ -49,6 +49,28 @@ struct Cluster {
   Cluster(int id) {
     ID = id;
   }
+};
+
+// this datablock contains references to all clusters in any of the DVGs of the global map that have been matched to the same singular obstacle.
+struct MatchingClusterSet {
+  std::vector<std::pair<size_t, Cluster&>> clusters;
+
+  void push_back(size_t indexInGlobalMap, Cluster& cluster) {
+    clusters.push_back(std::pair<size_t, Cluster&>{indexInGlobalMap, cluster});
+  }           
+
+  int getClusterSetSize() {
+    int size = 0;
+    for (size_t i = 0; i < clusters.size(); i++)
+      size += clusters[i].second.voxelIndices.size();
+    return size;
+  }
+};
+
+// this datablock contains references to all clusters in any of the DVGs of the global map, sorted in groups so that every group corresponds to an obstacle.
+// Every cluster reference in a group has been classified as part of that obstacle.
+struct GlobalClusters {
+  std::vector<MatchingClusterSet> matchingClusterSets;
 };
 
 class DVG {
@@ -216,6 +238,15 @@ public:
     voxels.clear();
   }
 
+  Cluster* getLargestGroundplaneCluster() {
+    Cluster* largestCluster;
+    for(auto& cluster : groundplaneClusters) {
+      if(!largestCluster || cluster.voxelIndices.size() > largestCluster->voxelIndices.size())
+        largestCluster = &cluster;
+    }
+    return largestCluster;
+  }
+
   // slow variant, Voxel data is copied over and index is calculated in a far from optimal way
   std::vector<Voxel*> getNeighbours(long index, int range = 2) {
     std::vector<Voxel*> neighbours;
@@ -311,6 +342,15 @@ public:
                   << "), ";
     }
   }
+};
+
+class GlobalMap {
+public:
+  std::vector<DVG> DVGs;
+  GlobalClusters globalClusters;
+
+private:
+
 };
 
 #endif

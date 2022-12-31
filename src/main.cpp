@@ -4,6 +4,7 @@
 #include "slam/dynamicVoxelGrid.h"
 #include "segmatch/normalEstimator.h"
 #include "segmatch/segmentation.h"
+#include "pathplanning/pathplanning.h"
 
 int main(int argc, char const *argv[])
 {
@@ -25,7 +26,7 @@ int main(int argc, char const *argv[])
 
   // segmap classes initialization
   DVG localDVG;
-  std::vector<DVG> globalDVGs;
+  GlobalMap globalMap;
 
   // startup
   engine.startEngine();
@@ -37,19 +38,37 @@ int main(int argc, char const *argv[])
     engine.updateDeltaTime();
     engine.moveRoverInDirection(glm::vec3{std::cos(0.1f * glfwGetTime()), 0.f, std::sin(0.1f * glfwGetTime())}, 0.1f);
 
-    // take measurements every given amount of walking cycles
+    // Sensor data retrieval and processing
     if (i % 8 == 0)
     {
       // every given amount of measurements, copy the local map into the global map, and empty the local map for the next batch of measurements
       if(i % (8 * 25) == 0) {
-        globalDVGs.push_back(localDVG);
-        localDVG.empty();
-
-        recentlyActivatedVoxelIndices.clear();
+        // update globalmap with new entry
+        globalMap.DVGs.push_back(localDVG);
 
         // Calculate segment correspondences
         // .....
 
+        // Update the global clusters in the global map
+        // .....
+        //! PLACEHOLDER CODE
+        Cluster* largestGroundplaneCluster = localDVG.getLargestGroundplaneCluster();
+
+        if(globalMap.globalClusters.matchingClusterSets.size() == 0)
+          globalMap.globalClusters.matchingClusterSets.push_back(MatchingClusterSet{});
+        globalMap.globalClusters.matchingClusterSets.front().push_back(globalMap.DVGs.size(), *largestGroundplaneCluster);
+
+        auto groundplaneCluster = localDVG.groundplaneClusters.rbegin();
+        for (size_t i = 0; i < localDVG.groundplaneClusters.size(); i++)
+        {
+          if(&(*groundplaneCluster) == largestGroundplaneCluster)
+            continue;
+          groundplaneCluster++;
+          MatchingClusterSet clusterSet{};
+          clusterSet.push_back(globalMap.DVGs.size(), *groundplaneCluster);
+          globalMap.globalClusters.matchingClusterSets.push_back(clusterSet);
+        }
+        
         // Throw new relations into ISAM2, and retrieve the set of new transformation matrices
         // .....
 
@@ -58,6 +77,10 @@ int main(int argc, char const *argv[])
 
         // Update the transformation matrices stored in the globalDVGs, or something, not sure yet why they are also stored in the DVGs
         // .....
+
+        // Reset the local map/DVG
+        localDVG.empty();
+        recentlyActivatedVoxelIndices.clear();
       }
 
       // Calculate new IMU based rover location
@@ -114,12 +137,6 @@ int main(int argc, char const *argv[])
       // Incremental Feature Extraction
       // .....
 
-      // 2D project groundplane clusters into mesh / image / smth
-      // .....
-
-      // Check if a navigation update is necessary, and if yes, calculate the new path
-      // .....
-
       // Get the failed voxels into the to be processed voxels list of next iteration
       recentlyActivatedVoxelIndices.clear();
       recentlyActivatedVoxelIndices = failedVoxels;
@@ -138,6 +155,18 @@ int main(int argc, char const *argv[])
       
       // export LOCAL normals to render engine
       Segmentation::loadClusterNormalsIntoEngine(localDVG, engine);
+    }
+
+    // path planning 
+    if (i % 8 * 4 == 0) {
+      // filter largest groundplane for the safe movement area
+      // .....
+
+      // 2D project groundplane clusters into mesh / image / smth
+      // .....
+
+      // Check if a navigation update is necessary, and if yes, calculate the new path
+      // .....
     }
 
     // render for debugging camera
