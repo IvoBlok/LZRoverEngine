@@ -14,12 +14,9 @@ int main(int argc, char const *argv[])
 
   // sensor data package definitions
   RoverDepthDataPackage depthData;
-  RoverImageDataPackage imageData;
 
   // visualization data blocks
   std::vector<glm::vec3> activeVoxels;
-  std::vector<glm::vec3> newLocalNormals;
-  std::vector<glm::vec3> newLocalNormals2;
 
   // local map data blocks
   std::vector<long> recentlyActivatedVoxelIndices;
@@ -34,7 +31,7 @@ int main(int argc, char const *argv[])
   int i = 0;
   while (true)
   {    
-    // move the rover
+    // move the rover in a given direction and let the engine physics do their thing
     engine.updateDeltaTime();
     engine.moveRoverInDirection(glm::vec3{std::cos(0.1f * glfwGetTime()), 0.f, std::sin(0.1f * glfwGetTime())}, 0.1f);
 
@@ -49,7 +46,7 @@ int main(int argc, char const *argv[])
         // Calculate segment correspondences
         // .....
 
-        // Update the global clusters in the global map
+        // Update the global clusters in the global map from segment correspondences
         // .....
         //! PLACEHOLDER CODE
         Cluster* largestGroundplaneCluster = localDVG.getLargestGroundplaneCluster();
@@ -160,7 +157,7 @@ int main(int argc, char const *argv[])
     // path planning 
     if (i % 8 * 4 == 0) {
       // filter largest groundplane for the safe movement area
-      // .....
+      std::vector<glm::vec3> safeArea = pathplanning::getSafeMovementVoxels(globalMap);
 
       // 2D project groundplane clusters into mesh / image / smth
       // .....

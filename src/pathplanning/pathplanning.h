@@ -12,15 +12,20 @@ namespace pathplanning {
     return glm::abs(glm::normalize(voxel->normal).y) < COS_MAX_SAFE_ANGLE_LUNAR_SURFACE;
   }
 
-  std::vector<glm::vec3> getSafeMovementVoxels(GlobalClusters& globalClusters, GlobalMap& globalMap) {
+  std::vector<glm::vec3> getSafeMovementVoxels(GlobalMap& globalMap) {
+    // datablock containing the final data; the centroids of all voxels in the globalMap this function deemed safe to traverse
     std::vector<glm::vec3> safeVoxelCentroids;
 
-    if(globalClusters.matchingClusterSets.size() == 0) { return safeVoxelCentroids; }
+    // define some references for an attempt at code readability
+    std::vector<MatchingClusterSet>& matchingClusterSets = globalMap.globalClusters.matchingClusterSets;
+
+
+    if(matchingClusterSets.size() == 0) { return safeVoxelCentroids; }
 
     // get the groundplane from the given DVG with the largest set of voxels in it. This is assumed to be the one the rover is currently on top of
     // TODO instead get the groundplane cluster which in the horizontal plane contains the rover position
     MatchingClusterSet* largestGroundplaneClusterSet;
-    for (auto& cluster : globalClusters.matchingClusterSets) {
+    for (auto& cluster : matchingClusterSets) {
       if(cluster.clusters[0].second.ID << 0 && (!largestGroundplaneClusterSet || largestGroundplaneClusterSet->getClusterSetSize() < cluster.getClusterSetSize())) 
         largestGroundplaneClusterSet = &cluster;
     }
