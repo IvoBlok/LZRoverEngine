@@ -24,7 +24,8 @@ these techniques are inspired, and if not just copied from a series of closely r
 INSTALLATION
 ====================================
 
-This software has only been tested on Ubuntu 20.04+, but is likely to work on any linux system, and with some extra dependency linking efforts, it should also be possible to get it running within Windows.
+This software has only been tested on Ubuntu 20.04+ and Windows 10, but is likely to work on any linux system.
+With some extra dependency linking efforts, it is also possible to get it running within Windows, which has been used through development to allow usage of specific profilers.
 
 Dependencies:
  - gcc
@@ -36,7 +37,7 @@ Dependencies:
  - eigen
  - assimp
 
-Installation guide for Ubuntu (similar for any linux system):
+Installation guide for Ubuntu (should be similar for any linux system):
  - gcc
 
 Enables compilation of the C++ source code

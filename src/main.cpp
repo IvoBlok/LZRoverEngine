@@ -8,21 +8,18 @@
 
 int main(int argc, char const *argv[])
 {
-
   // Engine responsible for sensor emulation and debug window
   LZEngine engine{160, 120};
 
   // sensor data package definitions
   RoverDepthDataPackage depthData;
-
   // visualization data blocks
   std::vector<glm::vec3> activeVoxels;
-
   // local map data blocks
   std::vector<long> recentlyActivatedVoxelIndices;
 
   // segmap classes initialization
-  DVG localDVG;
+  DVG localMap;
   GlobalMap globalMap;
 
   // startup
@@ -41,7 +38,7 @@ int main(int argc, char const *argv[])
       // every given amount of measurements, copy the local map into the global map, and empty the local map for the next batch of measurements
       if(i % (8 * 25) == 0) {
         // update globalmap with new entry
-        globalMap.DVGs.push_back(localDVG);
+        globalMap.DVGs.push_back(localMap);
 
         // Calculate segment correspondences
         // .....
@@ -49,6 +46,7 @@ int main(int argc, char const *argv[])
         // Update the global clusters in the global map from segment correspondences
         // .....
         //! PLACEHOLDER CODE
+        /*
         Cluster* largestGroundplaneCluster = localDVG.getLargestGroundplaneCluster();
 
         if(globalMap.globalClusters.matchingClusterSets.size() == 0)
@@ -65,7 +63,7 @@ int main(int argc, char const *argv[])
           clusterSet.push_back(globalMap.DVGs.size(), *groundplaneCluster);
           globalMap.globalClusters.matchingClusterSets.push_back(clusterSet);
         }
-        
+        */
         // Throw new relations into ISAM2, and retrieve the set of new transformation matrices
         // .....
 
@@ -76,7 +74,7 @@ int main(int argc, char const *argv[])
         // .....
 
         // Reset the local map/DVG
-        localDVG.empty();
+        localMap.empty();
         recentlyActivatedVoxelIndices.clear();
       }
 
@@ -121,15 +119,15 @@ int main(int argc, char const *argv[])
       /* #endregion */
 
       // Update Local DVG and update the buffer layers of the new active voxels
-      localDVG.insertPoints(depthData.pointclouds, recentlyActivatedVoxelIndices);
+      localMap.insertPoints(depthData.pointclouds, recentlyActivatedVoxelIndices);
 
       // Incremental Normal Estimation
       std::vector<long> failedVoxels;
-      NormalEstimator::calculateNormalsWithCovarianceMatrix(localDVG, recentlyActivatedVoxelIndices, failedVoxels);
+      NormalEstimator::calculateNormalsWithCovarianceMatrix(localMap, recentlyActivatedVoxelIndices, failedVoxels);
 
       // Incremental Segmentation
-      Segmentation::growGroundplaneClusters(localDVG, recentlyActivatedVoxelIndices);
-      Segmentation::growObstacleClusters(localDVG, recentlyActivatedVoxelIndices);
+      Segmentation::growGroundplaneClusters(localMap, recentlyActivatedVoxelIndices);
+      Segmentation::growObstacleClusters(localMap, recentlyActivatedVoxelIndices);
 
       // Incremental Feature Extraction
       // .....
@@ -151,13 +149,13 @@ int main(int argc, char const *argv[])
       //engine.setDVG(activeVoxels, 1, glm::vec3{1.f, 1.f, 0.f});
       
       // export LOCAL normals to render engine
-      Segmentation::loadClusterNormalsIntoEngine(localDVG, engine);
+      Segmentation::loadClusterNormalsIntoEngine(localMap, engine);
     }
 
     // path planning 
     if (i % 8 * 4 == 0) {
       // filter largest groundplane for the safe movement area
-      std::vector<glm::vec3> safeArea = pathplanning::getSafeMovementVoxels(globalMap);
+      // std::vector<glm::vec3> safeArea = pathplanning::getSafeMovementVoxels(globalMap);
 
       // 2D project groundplane clusters into mesh / image / smth
       // .....

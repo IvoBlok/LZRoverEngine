@@ -15,7 +15,7 @@
 
 // internal
 #include "shaders/shader.h"
-#include "user_camera.h"
+#include "userCamera.h"
 
 #include "roverObject.h"
 #include "lunarSurface.h"

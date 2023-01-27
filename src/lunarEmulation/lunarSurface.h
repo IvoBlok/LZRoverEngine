@@ -42,16 +42,15 @@ public:
       }
     }
 
+    // set surface base parameters
     gridXSquareCount = xSquareCount;
     gridZSquareCount = zSquareCount;
     offset = translate;
     squareSize = squareLength;
 
-    // texture
     loadTexture(texturePath, "texture_diffuse");
 
     setupMesh();
-    return;
   }
 
   // Retrieves the y-value of the closest vertex (projected onto the x,z plane) to a given x,z position
@@ -81,7 +80,7 @@ public:
   {
     // check if it lies within the boundary of the grid
     glm::vec2 edgeVec1 = offset;
-    glm::vec2 edgeVec2 = edgeVec2 + squareSize * glm::vec2{gridXSquareCount, gridZSquareCount};
+    glm::vec2 edgeVec2 = edgeVec1 + squareSize * glm::vec2{gridXSquareCount, gridZSquareCount};
     
     // if the given point is out of the XZ area covered by the grid, return NULL
     if(worldPosition.x <= edgeVec1.x || worldPosition.z <= edgeVec1.y || worldPosition.x >= edgeVec2.x || worldPosition.z >= edgeVec2.y) {
@@ -550,7 +549,6 @@ private:
 
     return scale;
   }
-
 };
 
 class LunarSurface {
@@ -602,8 +600,5 @@ public:
     shader.setMat4("model", modelMatrix);
     rocks.draw(shader, FBO);
   }
-
-private:
 };
-
 #endif
