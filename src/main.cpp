@@ -5,6 +5,8 @@
 #include "segmatch/normalEstimator.h"
 #include "segmatch/segmentation.h"
 #include "pathplanning/pathplanning.h"
+#include "slam/ICP.h"
+
 
 int main(int argc, char const *argv[])
 {
@@ -111,7 +113,7 @@ int main(int argc, char const *argv[])
 
       // Calculate the transformation from the new pointcloud with the estimated pose applied, to the current local map with partial ICP. 
       // The resulting matrix is the result of noise in mainly the Pose measuring device. ICP inherently also doesn't get to the exact answer, but it should be enough for this application
-      // .....
+      glm::mat4 transformationEstimate = slam::getTransformationEstimateBetweenPointclouds(depthData.pointclouds[0], localMap);
       
       // Apply the newly found transformation matrix, and push the new pointcloud to the local DVG
       // .....
