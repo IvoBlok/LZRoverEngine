@@ -5,15 +5,16 @@
 #include "mesh.h"
 #include "lunarSurface.h"
 
+// datablock storing three unit vectors, all orthogonal to each other, encoding the orientation of a sensor
 struct SensorPositioning {
   glm::vec3 relativePosition;
   glm::vec3 relativeUp;
   glm::vec3 relativeFront;
 };
 
-// this also needs future proofed thingy for stuff like moving legs, so it'll have to consist of a set of meshes
 class Rover : public Model {
 public:
+  char path[256];
   
   glm::vec3 position{0.f};
   glm::vec3 scale{1.f};
@@ -57,6 +58,7 @@ public:
     //addDepthCamera(glm::vec3{0.f, 0.1f, -0.02f}, glm::rotate(front, glm::radians(22.5f), up), glm::rotate(up, glm::radians(-5.f), glm::cross(front, up)));
   }
 
+  // given the relevant model data, this returns the transformation matrix from world space to model space
   glm::mat4 calculateModelMatrix(glm::vec3& position, glm::vec3& front, glm::vec3& up) {
     glm::vec3 right = glm::cross(front, up);
     glm::mat4 model = glm::mat4{1.f};
@@ -69,6 +71,7 @@ public:
     return model;
   }
 
+  // calculates the rotation matrix of this rover object relative to world space
   glm::mat3 calculateRotationMatrix() {
     glm::mat3 rot;
     glm::vec3 right = glm::cross(front, up);
@@ -80,6 +83,7 @@ public:
     return rot;
   }
 
+  // add an optical sensor to the rover at a given position and orientation relative to the zero point of the rover
   void addOpticalCamera(glm::vec3 relativePosition, glm::vec3 relativeFront, glm::vec3 relativeUp) {
     SensorPositioning sensorPos;
     sensorPos.relativePosition = relativePosition;
@@ -89,6 +93,7 @@ public:
     opticalCameraViewMatrices.push_back(sensorPos);
   }
 
+  // add an depth sensor to the rover at a given position and orientation relative to the zero point of the rover
   void addDepthCamera(glm::vec3 relativePosition, glm::vec3 relativeFront, glm::vec3 relativeUp) {
     SensorPositioning sensorPos;
     sensorPos.relativePosition = relativePosition;
@@ -98,7 +103,7 @@ public:
     depthCameraViewMatrices.push_back(sensorPos);
   }
 
-  void moveRover(glm::vec3 translation) {
+  void translateRover(glm::vec3 translation) {
     position += translation;
   }
 
@@ -168,28 +173,8 @@ public:
 
   void moveAlongSmoothSurface(LunarSurface& surface, glm::vec3 translation)
   {
-    position += translation;
+    translateRover(translation);
     position.y = surface.baseSurfaceHighDetail.getHeightOnSmoothSurfaceWithWorldPos(position);
   }
-
-  /*
-  ~Rover() {
-    std::cout << "roverboe\n";
-    for (size_t i = 0; i < meshes.size(); i++)
-    {
-      glBindVertexArray(meshes[i].VAO);
-      glDisableVertexAttribArray(0);
-      glDisableVertexAttribArray(1);
-      glDisableVertexAttribArray(2);
-      glBindVertexArray(0);
-
-      glDeleteBuffers(1, &meshes[i].VBO);
-      glDeleteBuffers(1, &meshes[i].EBO);
-      glDeleteVertexArrays(1, &meshes[i].VAO);
-    }
-  }
-  */
-
-  char path[256];
 };
 #endif

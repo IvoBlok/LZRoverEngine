@@ -56,7 +56,10 @@
       "chrono": "cpp",
       "complex": "cpp",
       "ratio": "cpp",
-      "thread": "cpp"
+      "thread": "cpp",
+      "condition_variable": "cpp",
+      "unordered_set": "cpp",
+      "mutex": "cpp"
     },
     "cmake.configureOnOpen": false
 }

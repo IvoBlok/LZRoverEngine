@@ -68,7 +68,7 @@ struct MatchingClusterSet {
 };
 
 // this datablock contains references to all clusters in any of the DVGs of the global map, sorted in groups so that every group corresponds to an obstacle.
-// Every cluster reference in a group has been classified as part of that obstacle.
+// Every cluster reference in a set has been classified as part of that obstacle.
 struct GlobalClusters {
   std::vector<MatchingClusterSet> matchingClusterSets;
 };

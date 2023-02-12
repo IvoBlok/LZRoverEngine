@@ -26,13 +26,6 @@ public:
     lastRotation = rotation;
     lastTranslation = translation;
 
-    if(glm::length(deltaTranslation) > 0.1f) {
-      // update estimates state
-      lastRotationGuess = rotation;
-      lastTranslationGuess = translation;
-      return;
-    }
-
     // noise model
     // ====================================
     // apply noise on the difference of input since the last time this function was called; This forms the exponential error growth
