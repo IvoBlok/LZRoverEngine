@@ -15,14 +15,6 @@
 
 #include "../settings.h"
 
-// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-// IN NOT VERY EARLY STAGES OF DEVELOPMENT
-// IN NOT VERY EARLY STAGES OF DEVELOPMENT
-// IN NOT VERY EARLY STAGES OF DEVELOPMENT
-// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
 struct Voxel {
 public:
   unsigned short int pointCount;

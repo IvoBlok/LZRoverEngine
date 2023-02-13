@@ -2,18 +2,28 @@
 #define SETTINGS_H
 // This is the main settings file meant for adjusting top-down settings. For more technical control over minute behaviour, see the headers in src/lunarEmulation, src/pathplanning, src/segmatch or src/slam
 
+
 // GENERAL 
 // ============================
 // defines the amount of frames of path planning based movement are run before another scan of the environment is made and processed
 #define FRAMES_PER_SCAN 8
 // defines the amount of scans made before a local map is seen as 'full', and passed on to the global map
 #define SCANS_PER_LOCAL_MAP 25
-// defines if synthetic noise will be added to both the pointcloud measurements of the environment and the relative positioning of the rover
-#define APPLY_SYNTHETIC_NOISE_TO_EMULATED_SENSORS false
+
+// defines if the physics should use real world time, or should use a fixed amount of time between scan iterations. realtime mode requires the computational performance to ensure the iterations per second is high enough for stable performance
+#define REALTIME_PHYSICS_ACTIVE false
+// defines the time between frames of the main algorithm in seconds. requires REALTIME_PHYSICS_ACTIVE to be false
+#define REALTIME_PHYSICS_TIME_PER_FRAME 0.2f 
+// defines if the next scan iteration requires a key press to start. In the alternative state the next iteration is immediately started once the current one finishes. Debug rendering is still processed while waiting for the specific key press, making this usefull for debugging
+#define START_NEXT_ITERATION_WITH_KEYPRESS_ACTIVE true
+// defines the key to press to process the next scan iteration, given that START_NEXT_ITERATION_WITH_KEYPRESS_ACTIVE is true. Should follow the glfw key names
+#define START_NEXT_ITERATION_WITH_KEYPRESS_KEY GLFW_KEY_N
 
 
 // EMULATION ENGINE
 // ============================
+// defines if synthetic noise will be added to both the pointcloud measurements of the environment and the relative positioning of the rover
+#define APPLY_SYNTHETIC_NOISE_TO_EMULATED_SENSORS false
 // defines the resolution of the pointcloud in the horizontal direction relative to the sensor. the resulting pointcloud can have less width then this setting due to there being no surface to see at the edge(s)
 #define POINTCLOUD_SCAN_WIDTH 60
 // defines the resolution of the pointcloud in the vertical direction relative to the sensor. the resulting pointcloud is likely to have less height then this setting due to there being no surface to see at the edge(s)
@@ -24,6 +34,7 @@
 #define EXPORTIMAGE false
 // defines if the location of the sensors should be added to the pointcloud returned from taking a measurement. Be warned, this might mess with the other navigation steps and is intended to debug the emulation engine
 #define DEBUG_CAMERA_ORIENTATIONS false
+
 
 // SLAM
 // ============================

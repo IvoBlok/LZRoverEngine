@@ -23,6 +23,8 @@
 
 #include "NoiseModel.h"
 
+#include "../settings.h"
+
 // standard library
 #include <iostream>
 #include <stdlib.h>
@@ -495,8 +497,14 @@ public:
   // returns float : updated debugDeltaTime value
   float updateDeltaTime() {
     // time logic
-    debugDeltaTime = static_cast<float>(glfwGetTime()) - lastFrame;
-    lastFrame += debugDeltaTime;
+    #if REALTIME_PHYSICS_ACTIVE
+      debugDeltaTime = static_cast<float>(glfwGetTime()) - lastFrame;
+      lastFrame += debugDeltaTime;
+    #else
+      debugDeltaTime = REALTIME_PHYSICS_TIME_PER_FRAME;
+      lastFrame += debugDeltaTime;
+    #endif
+
     return debugDeltaTime;
   }
 

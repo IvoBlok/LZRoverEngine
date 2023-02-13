@@ -27,7 +27,7 @@ void planPathAndMoveRover() {
   // boring path 'planning' solution to validate the rest of the solutions. This just moves the rover in a big circle
   // this should be replaced at some point by the path planning algorithm
   engine.updateDeltaTime();
-  engine.moveRoverInDirection(glm::vec3{std::cos(0.1f * glfwGetTime()), 0.f, std::sin(0.1f * glfwGetTime())}, 0.1f);
+  engine.moveRoverInDirection(glm::vec3{std::cos(0.1f * glfwGetTime()), 0.f, std::sin(0.1f * glfwGetTime())}, 0.025f);
 
   // filter largest groundplane for the safe movement area
   // std::vector<glm::vec3> safeArea = pathplanning::getSafeMovementVoxels(globalMap);
@@ -75,12 +75,6 @@ void applyDepthDataRegistration() {
     }
   }
   
-  // DEBUG
-  std::cout << "=-=-=-=-=-=-=-=-=-=-=\n";
-  std::cout << transformationEstimate[0][0] << " " << transformationEstimate[0][1] << " " << transformationEstimate[0][2] << " " << transformationEstimate[0][3] << std::endl;
-  std::cout << transformationEstimate[1][0] << " " << transformationEstimate[1][1] << " " << transformationEstimate[1][2] << " " << transformationEstimate[1][3] << std::endl;
-  std::cout << transformationEstimate[2][0] << " " << transformationEstimate[2][1] << " " << transformationEstimate[2][2] << " " << transformationEstimate[2][3] << std::endl;
-
   // Update the position the software thinks the rover is at with this new estimate
   // .....
   // TODO
@@ -178,13 +172,19 @@ int main(int argc, char const *argv[])
       recentlyActivatedVoxelIndices = failedVoxels;
 
       if(frame % (FRAMES_PER_SCAN * SCANS_PER_LOCAL_MAP) == 0) {
+        std::cout << "global map insertion occured!\n";
         insertLocalMapToGlobalMap();
       }
+      
+      visualizeDataInEngine(); 
 
-      visualizeDataInEngine();
     }
 
-    engine.debugRenderImage();
+    do {
+      engine.debugRenderImage();
+    }
+    while(START_NEXT_ITERATION_WITH_KEYPRESS_ACTIVE && glfwGetKey(engine.window, START_NEXT_ITERATION_WITH_KEYPRESS_KEY) != GLFW_PRESS);    
+
     frame++;
   }
   engine.stopEngine();

@@ -1,6 +1,14 @@
 #ifndef PATHPLANNING_H
 #define PATHPLANNING_H
 
+// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// IN VERY EARLY STAGES OF DEVELOPMENT
+// IN VERY EARLY STAGES OF DEVELOPMENT
+// IN VERY EARLY STAGES OF DEVELOPMENT
+// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
 #define MAX_SAFE_ANGLE_LUNAR_SURFACE 15.f
 #include "../slam/dynamicVoxelGrid.h"
 
@@ -39,6 +47,8 @@ namespace pathplanning {
           safeVoxelCentroids.push_back(voxel->centroid);
       }
     }
+
+    return safeVoxelCentroids;
   }
 }
 #endif

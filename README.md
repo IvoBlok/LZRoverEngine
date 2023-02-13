@@ -106,6 +106,11 @@ To execute the project, run the compiled executable
 
 If after taking these steps, a change is made to the source code, only the last two steps are needed to run the updated source code.
 
+DEBUG CONTROLS
+====================================
+For movement of the debug camera, use WASD to move in the plane defined by the debug camera's up direction as it's normal vector, and spacebar and left shift to move up and down the previously mentioned vector respectively.
+Some other controls can be modified from the settings.h file and/or might need to be enabled with another setting in the same file.
+
 QUESTIONS / HELP
 ====================================
 

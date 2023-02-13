@@ -15,31 +15,6 @@
 
 namespace slam {
 
-  std::vector<glm::vec3> subsamplePointclouds(std::vector<std::vector<glm::vec3>>& sourcePointcloudSet, int desiredPointCount, int pointcountSourcePointcloudSet) {
-    if(desiredPointCount > pointcountSourcePointcloudSet) {
-      std::cout << "ERROR: subsamplePointclouds() expected a pointcount smaller then the total pointcount of the given pointcloud\n";
-      return std::vector<glm::vec3>{};
-    }
-
-    std::vector<glm::vec3> result;
-    float index = 0.f;
-
-    // terribly slow way of retrieving the i'th value in a two dimensional array, but the fancy way was too buggy for me rn
-    std::vector<glm::vec3> sourcePointcloud;
-    for (size_t i = 0; i < sourcePointcloudSet.size(); i++)
-    {
-      sourcePointcloud.insert(sourcePointcloud.end(), sourcePointcloudSet[i].begin(), sourcePointcloudSet[i].end());
-    }
-    
-
-    while(result.size() < desiredPointCount) {
-      result.push_back(sourcePointcloud[(int)std::round(index)]);
-
-      index += (float)pointcountSourcePointcloudSet / (float)desiredPointCount;
-    }
-    return result;
-  }
-
   // currently this function uses the naive and horribly scaling approach of just iterating over all points in the dvg and checking if it is closer then the ones before
   glm::vec3 findClosestVoxelInDVG(glm::vec3 position, DVG& dvg) {
     float distanceSquaredToClosestVoxel;
@@ -52,10 +27,9 @@ namespace slam {
         closestVoxelCentroid = voxel.centroid;
       }
     }
-
     return closestVoxelCentroid;
   }
-
+ 
   std::vector<glm::vec3> findClosestVoxelsInDVGToPointcloudSet(std::vector<std::vector<glm::vec3>>& pointcloudSet, DVG& dvg) {
     std::vector<glm::vec3> matchedPoints;
 
@@ -67,14 +41,13 @@ namespace slam {
     return matchedPoints;
   }
 
-
   // haven't looked into it too much, but I (Ivo) was planning on basing the ICP implementation on the one presented in the following paper:
   // https://www.comp.nus.edu.sg/~lowkl/publications/lowk_point-to-plane_icp_techrep.pdf
   // implementation is strongly inspired by the one here: https://github.com/agnivsen/icp/blob/master/basicICP.py
   glm::mat4 getTransformationEstimateBetweenPointclouds(std::vector<std::vector<glm::vec3>>& sourcePointcloudSet, DVG& destinationPointcloud) {
     glm::mat4 transformationEstimate = glm::mat4{1.f};
     
-    if(destinationPointcloud.voxels.size() == 0)
+    if(destinationPointcloud.voxels.size() == 0 || sourcePointcloudSet.size() == 0 || sourcePointcloudSet[0].size() == 0)
       return glm::mat4{1.f};
     
     // find a sufficiently good match for every point in the source pointcloud set within the destination pointcloud
@@ -110,12 +83,17 @@ namespace slam {
       b(i) = _b;
     }
 
+    // solve the matrix equation ...
     Eigen::MatrixXf pseudoInverseA = A.completeOrthogonalDecomposition().pseudoInverse();
     Eigen::VectorXf transformation = pseudoInverseA * b;
 
     // go from the 6 elements in a vector describing the transformation to an actual 4x4 transformation matrix
     transformationEstimate = glm::eulerAngleZYX(transformation(2), transformation(1), transformation(0));
     transformationEstimate = glm::translate(transformationEstimate, glm::vec3{transformation(3), transformation(4), transformation(5)});
+    
+    std::cout << "=========================\n";
+    std::cout << transformation(0) << " " << transformation(1) << " " << transformation(2) << std::endl;
+    std::cout << transformation(3) << " " << transformation(4) << " " << transformation(5) << std::endl;
 
     return transformationEstimate;
   }
