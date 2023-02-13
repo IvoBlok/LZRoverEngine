@@ -13,6 +13,8 @@
 #include <fstream>
 #include <iostream>
 
+#include "../settings.h"
+
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 // IN NOT VERY EARLY STAGES OF DEVELOPMENT
@@ -92,9 +94,9 @@ public:
   unsigned int heightBitCount = 8;
 
   // scaling factor of the coordinates. conversion to voxel side length in world space = 1.f / (float)resolution
-  float resolution = 40;
+  float resolution = RESOLUTION_DVG;
   // minimum amount of points required in a voxel to make it active
-  unsigned int pointsRequiredForActiveVoxel = 2;
+  unsigned int pointsRequiredForActiveVoxel = REQUIRED_POINTCOUNT_TO_BECOME_ACTIVE;
 
   std::pair<bool, unsigned int> binarySearch(long index) {
     if (voxels.size() == 0 || voxels[0].index > index) {return {false, 0}; }

@@ -310,7 +310,7 @@ public:
   }
 
   // function responsible for retrieving the pointcloud information and storing it in a given datablock
-  // if EXPORTPOINTCLOUD is defined, the resulting pointcloud is stored as a .csv file in the directory of the executable
+  // if EXPORTPOINTCLOUD is true, the resulting pointcloud is stored as a .csv file in the directory of the executable
   // =============================================
   // RoverDepthDataPackage& data : datablock where the newly calculated TOF / LIDAR sensor data is to be stored
   void getDepthDataPackage(RoverDepthDataPackage& data) {
@@ -348,7 +348,7 @@ public:
 
       data.pointclouds.push_back(getPointCloud(depthImage, i));
 
-      #ifdef DEBUG_CAMERA_ORIENTATIONS
+      #if DEBUG_CAMERA_ORIENTATIONS
         data.pointclouds.back().push_back(positionCam);
         data.pointclouds.back().push_back(positionCam + 0.1f * upCam);
         data.pointclouds.back().push_back(positionCam + 0.1f * frontCam);
@@ -363,7 +363,7 @@ public:
     data.pose.rotation = IMUPoseEstimate.rotation;
     data.pose.translation = IMUPoseEstimate.translation;
 
-    #ifdef EXPORTPOINTCLOUD
+    #if EXPORTPOINTCLOUD
       pointcloudFileIndex++;
       std::string pointcloudFileName = "pointcloud" + to_string(pointcloudFileIndex) + ".csv";
       std::ofstream pointcloudOutStream(pointcloudFileName);
@@ -381,7 +381,7 @@ public:
   }
 
   // function responsible for retrieving the optical image and storing it in a given datablock
-  // if EXPORTIMAGE is defined, the resulting image is stored as a .png file in the directory of the executable
+  // if EXPORTIMAGE is true, the resulting image is stored as a .png file in the directory of the executable
   // =============================================
   // RoverImageDataPackage& data : datablock where the newly calculated camera sensor data is to be stored
   void getImageDataPackage(RoverImageDataPackage& data) {
@@ -452,7 +452,7 @@ public:
     data.pose.rotation = IMUPoseEstimate.rotation;
     data.pose.translation = IMUPoseEstimate.translation;
 
-    #ifdef EXPORTIMAGE
+    #if EXPORTIMAGE
       imageFileIndex++;
       std::string opticalImageFileName = "opticalImage" + to_string(imageFileIndex) + ".png";
 

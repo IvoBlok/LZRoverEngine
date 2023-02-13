@@ -15,8 +15,8 @@
 
 namespace slam {
 
-  std::vector<glm::vec3> subsamplePointclouds(std::vector<std::vector<glm::vec3>>& sourcePointclouds, int desiredPointCount, int sourcePointcloudsPointcount) {
-    if(desiredPointCount > sourcePointcloudsPointcount) {
+  std::vector<glm::vec3> subsamplePointclouds(std::vector<std::vector<glm::vec3>>& sourcePointcloudSet, int desiredPointCount, int pointcountSourcePointcloudSet) {
+    if(desiredPointCount > pointcountSourcePointcloudSet) {
       std::cout << "ERROR: subsamplePointclouds() expected a pointcount smaller then the total pointcount of the given pointcloud\n";
       return std::vector<glm::vec3>{};
     }
@@ -26,51 +26,59 @@ namespace slam {
 
     // terribly slow way of retrieving the i'th value in a two dimensional array, but the fancy way was too buggy for me rn
     std::vector<glm::vec3> sourcePointcloud;
-    for (size_t i = 0; i < sourcePointclouds.size(); i++)
+    for (size_t i = 0; i < sourcePointcloudSet.size(); i++)
     {
-      sourcePointcloud.insert(sourcePointcloud.end(), sourcePointclouds[i].begin(), sourcePointclouds[i].end());
+      sourcePointcloud.insert(sourcePointcloud.end(), sourcePointcloudSet[i].begin(), sourcePointcloudSet[i].end());
     }
     
 
     while(result.size() < desiredPointCount) {
       result.push_back(sourcePointcloud[(int)std::round(index)]);
 
-      index += (float)sourcePointcloudsPointcount / (float)desiredPointCount;
+      index += (float)pointcountSourcePointcloudSet / (float)desiredPointCount;
     }
     return result;
   }
-  
+
+  // currently this function uses the naive and horribly scaling approach of just iterating over all points in the dvg and checking if it is closer then the ones before
+  glm::vec3 findClosestVoxelInDVG(glm::vec3 position, DVG& dvg) {
+    float distanceSquaredToClosestVoxel;
+    glm::vec3 closestVoxelCentroid;
+    for(auto& voxel : dvg.voxels) {
+      float squaredDistance = glm::dot(voxel.centroid - position, voxel.centroid - position);
+
+      if(!distanceSquaredToClosestVoxel  || squaredDistance < distanceSquaredToClosestVoxel) {
+        distanceSquaredToClosestVoxel = squaredDistance;
+        closestVoxelCentroid = voxel.centroid;
+      }
+    }
+
+    return closestVoxelCentroid;
+  }
+
+  std::vector<glm::vec3> findClosestVoxelsInDVGToPointcloudSet(std::vector<std::vector<glm::vec3>>& pointcloudSet, DVG& dvg) {
+    std::vector<glm::vec3> matchedPoints;
+
+    // iterate through the nested vector of points in space...
+    for(auto& row : pointcloudSet)
+      for(auto& element : row)
+        matchedPoints.push_back(findClosestVoxelInDVG(dvg.voxels[matchedPoints.size()].centroid, dvg));
+    
+    return matchedPoints;
+  }
+
 
   // haven't looked into it too much, but I (Ivo) was planning on basing the ICP implementation on the one presented in the following paper:
   // https://www.comp.nus.edu.sg/~lowkl/publications/lowk_point-to-plane_icp_techrep.pdf
-  // By now has changed to first doing this, which is quite similar: https://github.com/agnivsen/icp/blob/master/basicICP.py
-  glm::mat4 getTransformationEstimateBetweenPointclouds(std::vector<std::vector<glm::vec3>>& sourcePointclouds, DVG& destinationPointcloud) {
+  // implementation is strongly inspired by the one here: https://github.com/agnivsen/icp/blob/master/basicICP.py
+  glm::mat4 getTransformationEstimateBetweenPointclouds(std::vector<std::vector<glm::vec3>>& sourcePointcloudSet, DVG& destinationPointcloud) {
     glm::mat4 transformationEstimate = glm::mat4{1.f};
     
     if(destinationPointcloud.voxels.size() == 0)
       return glm::mat4{1.f};
     
-    // the rest of the algorithm requires that the source and destination have the same pointcount
-    // thus first this needs to be checked, and if necessary, the pointclouds have to be subsampled to the correct size
-    int sourceOriginalPointCount = 0;
-    for (size_t i = 0; i < sourcePointclouds.size(); i++)
-      sourceOriginalPointCount += sourcePointclouds[i].size();
-    
-    std::vector<glm::vec3> subsampledSourcePointcloud;
-    if(sourceOriginalPointCount > destinationPointcloud.voxels.size()) 
-    {
-      subsampledSourcePointcloud = subsamplePointclouds(sourcePointclouds, destinationPointcloud.voxels.size(), sourceOriginalPointCount);
-    }
-    else if (sourceOriginalPointCount < destinationPointcloud.voxels.size()) {
-      std::cout << "ERROR: NOT IMPLEMENTED YET\n";
-      // TODO
-      return glm::mat4{1.f};
-    }
-
-
-    // DEBUG
-    std::cout << "ICP matrices sizes:" << std::endl;
-    std::cout << "subsampledSourcePointcloud: " << sourceOriginalPointCount << " " << destinationPointcloud.voxels.size() << " " << subsampledSourcePointcloud.size() << std::endl;
+    // find a sufficiently good match for every point in the source pointcloud set within the destination pointcloud
+    std::vector<glm::vec3> sourcePointcloudSetMatches = findClosestVoxelsInDVGToPointcloudSet(sourcePointcloudSet, destinationPointcloud);
 
     // now that the inputs are ready, start by constructing the A and b required to solve the matrix equation which is equivalent to the ICP problem
     Eigen::MatrixXf A{(int)destinationPointcloud.voxels.size(), 6};
@@ -81,7 +89,7 @@ namespace slam {
       glm::vec3& destNormal = destinationPointcloud.voxels[i].normal;
       glm::vec3& destPosition = destinationPointcloud.voxels[i].centroid;
 
-      glm::vec3& sourcePosition = subsampledSourcePointcloud[i];
+      glm::vec3& sourcePosition = sourcePointcloudSetMatches[i];
 
       float a1 = (destNormal.z * sourcePosition.y) - (destNormal.y * sourcePosition.z);
       float a2 = (destNormal.x * sourcePosition.z) - (destNormal.z * sourcePosition.x);

@@ -145,7 +145,6 @@ void visualizeDataInEngine() {
 
 int main(int argc, char const *argv[])
 {
-  // startup
   engine.startEngine();
 
   int frame = 0;
@@ -153,11 +152,9 @@ int main(int argc, char const *argv[])
   {    
     planPathAndMoveRover();
 
-    // Sensor data retrieval and processing
-    // ============================
     if (frame % FRAMES_PER_SCAN == 0)
     {
-      engine.updateIMUEstimate(false);
+      engine.updateIMUEstimate(APPLY_SYNTHETIC_NOISE_TO_EMULATED_SENSORS);
       engine.getDepthDataPackage(depthData);
 
       applyDepthDataRegistration();
