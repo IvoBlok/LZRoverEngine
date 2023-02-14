@@ -1,5 +1,3 @@
-//#define EXPORTPOINTCLOUD
-//#define EXPORTIMAGE
 #include "lunarEmulation/LZEngine.h"
 #include "segmatch/normalEstimator.h"
 #include "segmatch/segmentation.h"
@@ -13,7 +11,7 @@
 LZEngine engine{POINTCLOUD_SCAN_WIDTH, POINTCLOUD_SCAN_HEIGHT};
 
 // Class defining a simple system of enabling the correction of the error buildup of the positioning sensor on the rover
-RoverPoseEstimate roverPositionEstimate;
+RoverPoseEstimate roverPoseEstimate;
 
 // sensor data package definitions
 RoverDepthDataPackage depthData;
@@ -44,9 +42,12 @@ void planPathAndMoveRover() {
 }
 
 void applyDepthDataRegistration() {
-  glm::mat3 inversePoseRot = glm::inverse(depthData.pose.rotation);
-  glm::mat3 inverseInitPoseRot = glm::inverse(engine.getInitialRealPose().rotation);
-  glm::vec3 initPoseTranslation = engine.getInitialRealPose().translation;
+  // retrieve new data from the rover sensors
+  engine.updateIMUEstimate(APPLY_SYNTHETIC_NOISE_TO_EMULATED_SENSORS);
+  engine.getDepthDataPackage(depthData);
+
+  // update the position the software thinks the rover is at based on the IMU measurement that was sent together with the depth data package
+  roverPoseEstimate.processNewIMUEstimate(depthData.pose);
 
   // transform depth measurements to estimated world space with pose estimate directly from pose measurement sensor
   for (size_t i = 0; i < depthData.pointclouds.size(); i++)
@@ -56,15 +57,11 @@ void applyDepthDataRegistration() {
       // offset for the sensor position
       depthData.pointclouds[i][j] += engine.roverObject.depthCameraViewMatrices[i].relativePosition;
 
-      // transform to coords relative to initial rover state
-      depthData.pointclouds[i][j] = inversePoseRot * depthData.pointclouds[i][j];
-
-      // translate form initial pose position
-      depthData.pointclouds[i][j] += depthData.pose.translation;
-
       // transform from relative to absolute purely for debug/visualization reasons
-      depthData.pointclouds[i][j] += initPoseTranslation;
-      depthData.pointclouds[i][j] = inverseInitPoseRot * depthData.pointclouds[i][j];
+      depthData.pointclouds[i][j] = engine.getInitialRealPose() * glm::vec4{depthData.pointclouds[i][j], 1.f};
+
+      // transform from rover space to initial pose space, where with 'initial pose space' the 3D space with principal axes aligned with those of the initial pose of the rover
+      depthData.pointclouds[i][j] = depthData.pose * glm::vec4{depthData.pointclouds[i][j], 1.f};
     }
   }
 
@@ -72,6 +69,9 @@ void applyDepthDataRegistration() {
   // The resulting matrix is the result of noise in mainly the Pose measuring device. ICP inherently also doesn't get to the exact answer, but it should be enough for this application
   glm::mat4 transformationEstimate = slam::getTransformationEstimateBetweenPointclouds(depthData.pointclouds, localMap);
   
+  // update where the software thinks the rover is at, thus improving the accuracy of the localization
+  roverPoseEstimate.modifyCurrentPoseEstimate(transformationEstimate);
+
   // Apply the newly found transformation matrix, and push the new pointcloud to the local DVG
   for (size_t i = 0; i < depthData.pointclouds.size(); i++){
     for (size_t j = 0; j < depthData.pointclouds[i].size(); j++) {
@@ -157,9 +157,6 @@ int main(int argc, char const *argv[])
 
     if (frame % FRAMES_PER_SCAN == 0)
     {
-      engine.updateIMUEstimate(APPLY_SYNTHETIC_NOISE_TO_EMULATED_SENSORS);
-      engine.getDepthDataPackage(depthData);
-
       applyDepthDataRegistration();
 
       // Update Local DVG and update the buffer layers of the new active voxels

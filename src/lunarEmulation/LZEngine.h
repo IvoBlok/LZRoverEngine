@@ -40,23 +40,14 @@ UserCamera camera{};
 float debugDeltaTime = 0.0f;
 float lastFrame = 0.0f;
 
-// data block that stores the difference between state A and B of the rover in world space
-// =============================================
-// glm::mat3 rotation : 3x3 rotation matrix from state A to B 
-// glm::vec3 translation : translation of the zero point from state A to B, relative to the triad defined in 'rotation'
-struct RoverPose {
-  glm::mat3 rotation = glm::mat3{1.f};
-  glm::vec3 translation = glm::vec3{0.f};
-};
-
 // data block that is returned from the engine if a request for a pointcloud is issued. 
 // roverUp and roverFront together encode the 3D orientation of the rover. 
 // =============================================
 // std::vector<glm::vec3> pointcloud : vector of 3D points that hit the simulated lunar surface. starts at the left bottom corner, and goes up row wise
-// RoverPose pose : pose estimate of the rover according to the IMU at the time of retrieving the data in the package
+// glm::mat4 pose : pose estimate of the rover according to the IMU at the time of retrieving the data in the package
 struct RoverDepthDataPackage {
   std::vector<std::vector<glm::vec3>> pointclouds;
-  RoverPose pose;
+  glm::mat4 pose;
 };
 
 // data block that is returned from the engine if a request for a RGB image is issued.
@@ -65,13 +56,13 @@ struct RoverDepthDataPackage {
 // std::vector<float*> opticalImages : vector of array of floats storing the images of the cameras on the rover. for every value in the vector, the float array starts at the left bottom corner, and goes up row wise
 // std::vector<unsigned int> opticalImageWidths : amount of pixels per row of the image for every image in opticalImages
 // std::vector<unsigned int> opticalImageHeights : amount of pixels per column of the image for every image in opticalImages
-// RoverPose pose : pose estimate of the rover according to the IMU at the time of retrieving the data in the package
+// glm::mat4 pose : pose estimate of the rover according to the IMU at the time of retrieving the data in the package
 struct RoverImageDataPackage {
   std::vector<float*> opticalImages;
   std::vector<unsigned int> opticalImageWidths;
   std::vector<unsigned int> opticalImageHeights;
 
-  RoverPose pose;
+  glm::mat4 pose;
 };
 
 // class managing the emulation of all required physical components of the mission (starting from deployment).
@@ -104,9 +95,9 @@ public:
   GLFWwindow* window;
 
   // trajectory estimation
-  RoverPose IMUPoseEstimate;
-  RoverPose initialRealPose;
-  RoverPose realPose;
+  glm::mat4 IMUPoseEstimate;
+  glm::mat4 initialRealPose;
+  glm::mat4 realPose;
   PoseNoiseModel poseNoiseModelObj;
   PointcloudNoiseModel pclNoiseModelObj;
 
@@ -144,8 +135,7 @@ public:
   std::vector<glm::vec3> getPointCloud(float* image, unsigned int sensorID = 0) {
     std::vector<glm::vec3> pointcloud;
 
-    glm::vec3 roverPosition = roverObject.getRoverPosition();
-    glm::mat3 WorldToRoverMatrix = glm::inverse(roverObject.calculateRotationMatrix());
+    glm::mat4 WorldToRoverMatrix = glm::inverse(roverObject.calculateModelMatrix());
 
     float resXFactor = (float)SCR_WIDTH / (float)POINTCLOUD_WIDTH;
     float resYFactor = (float)SCR_HEIGHT / (float)POINTCLOUD_WIDTH;
@@ -171,9 +161,8 @@ public:
         }
 
         // translate the world position of the point into relative to the rover zero point 
-        worldPos -= roverPosition;
         // transform relative world position to relative rover position, with scaling removed
-        worldPos = WorldToRoverMatrix * worldPos;
+        worldPos = WorldToRoverMatrix * glm::vec4{worldPos, 1.f};
         // translate from relative to rover zero to relative to sensor zero
         worldPos -= roverObject.depthCameraViewMatrices[sensorID].relativePosition;
 
@@ -193,6 +182,7 @@ public:
   // * Sets up opengl Buffers
   // * Sets up memory for later use in the LZEngine
   // * Generates the lunar surface
+  // * Enables emulating rover sensors
   // =============================================
   void startEngine() {
     /* #region set up window */
@@ -283,17 +273,15 @@ public:
     roverObject.setupDefaultRover(lunarSurfaceObject);
 
     // initialize IMU variables
-    IMUPoseEstimate.rotation = glm::mat3{1.f};
-    IMUPoseEstimate.translation = glm::vec3{0.f};
+    IMUPoseEstimate = glm::mat4{1.f};
 
-    initialRealPose.rotation = glm::inverse(roverObject.calculateRotationMatrix());
-    initialRealPose.translation = roverObject.position;
+    // from rover to world space
+    initialRealPose = roverObject.calculateModelMatrix();
 
-    realPose.rotation = initialRealPose.rotation;
-    realPose.translation = initialRealPose.translation;
+    realPose = initialRealPose;
 
     // initialize noise models
-    poseNoiseModelObj = PoseNoiseModel{IMUPoseEstimate.rotation, IMUPoseEstimate.translation, IMUPoseEstimate.rotation, IMUPoseEstimate.translation};
+    // ....
 
     // Set debug camera
     camera.Position = glm::vec3{1.f, 2.f, 1.f};
@@ -362,8 +350,7 @@ public:
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // set non-unique request data
-    data.pose.rotation = IMUPoseEstimate.rotation;
-    data.pose.translation = IMUPoseEstimate.translation;
+    data.pose = IMUPoseEstimate;
 
     #if EXPORTPOINTCLOUD
       pointcloudFileIndex++;
@@ -451,8 +438,7 @@ public:
     }
 
     // set non-sensor request data
-    data.pose.rotation = IMUPoseEstimate.rotation;
-    data.pose.translation = IMUPoseEstimate.translation;
+    data.pose = IMUPoseEstimate;
 
     #if EXPORTIMAGE
       imageFileIndex++;
@@ -472,23 +458,21 @@ public:
   // This function includes the drifting effect of numerically aproximating an integral.
   // =============================================
   void updateIMUEstimate(bool applyNoise = true) {  
-    // update realPose
-    realPose.rotation = glm::inverse(roverObject.calculateRotationMatrix());
-    realPose.translation = roverObject.getRoverPosition();
+    // update realPose, which transforms points from rover space to world space
+    realPose = roverObject.calculateModelMatrix();
 
-    // update exact IMU
-    IMUPoseEstimate.rotation = realPose.rotation * glm::inverse(initialRealPose.rotation);
-    IMUPoseEstimate.translation = realPose.translation - initialRealPose.translation;
+    // update exact IMU, which is just the transformation from the initial real position to the current real position
+    IMUPoseEstimate = realPose * glm::inverse(initialRealPose);
 
     // noise
-    // if(applyNoise) { poseNoiseModelObj.applyIMUNoise(IMUPoseEstimate.rotation,IMUPoseEstimate.translation); }
+    // TODO replacing noise system | if(applyNoise) { poseNoiseModelObj.applyIMUNoise(IMUPoseEstimate.rotation,IMUPoseEstimate.translation); }
   }
 
   // function responsible for returning a copy of the 'initialRealPose' variable. 
   // This is usefull for the debugging visual environment, so that the relative measurements can be offset to overlap with the actual world.
   // =============================================
-  // returns RoverPose : copy of the 'initialRealPose' variable
-  RoverPose getInitialRealPose() {
+  // returns glm::mat4 : copy of the 'initialRealPose' variable
+  glm::mat4& getInitialRealPose() {
     return initialRealPose;
   }
 

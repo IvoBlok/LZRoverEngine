@@ -1,7 +1,5 @@
-#ifndef ROVER_POSITION_H
-#define ROVER_POSITION_H
-
-#include "../lunarEmulation/LZEngine.h"
+#ifndef ROVER_POSE_H
+#define ROVER_POSE_H
 
 #include <glm/glm.hpp>
 
@@ -9,48 +7,27 @@
 class RoverPoseEstimate {
 public:
   void modifyCurrentPoseEstimate(glm::mat4 transformation) {
-    glm::mat4 currentPose = getMatrixFormOfRoverPose(currentPoseEstimate);
-
-    glm::mat4 newCurrentPose = transformation * currentPose;
-
-    currentPoseEstimate.rotation = glm::mat3{newCurrentPose};
-    currentPoseEstimate.translation = glm::vec3{newCurrentPose * glm::vec4{0.f, 0.f, 0.f, 1.f}};
+    currentPoseEstimate = transformation * currentPoseEstimate;
   }
 
-  glm::mat4 getChangeInIMUTransformation(RoverPose& currentIMUEstimate) {
-    glm::mat4 previousIMUTransformation = getMatrixFormOfRoverPose(previousIMUEstimate);
-    glm::mat4 currentIMUTransformation = getMatrixFormOfRoverPose(currentIMUEstimate);
-
-    return currentIMUTransformation * glm::inverse(previousIMUTransformation);
+  glm::mat4 getChangeInIMUTransformation(glm::mat4& currentIMUEstimate) {
+    return currentIMUEstimate * glm::inverse(previousIMUEstimate);
   }
 
-  void processNewIMUEstimate(RoverPose& currentIMUEstimate) {
-    glm::mat4 changeInIMUTransformation = getChangeInIMUTransformation(currentIMUEstimate); 
+  void processNewIMUEstimate(glm::mat4& currentIMUEstimate) {
+    glm::mat4 changeInIMUEstimate = getChangeInIMUTransformation(currentIMUEstimate); 
     previousIMUEstimate = currentIMUEstimate;
 
-    glm::mat4 currentPoseTransformation = changeInIMUTransformation * getMatrixFormOfRoverPose(currentPoseEstimate);
-
-    currentPoseEstimate.rotation = glm::mat3{currentPoseTransformation};
-    currentPoseEstimate.translation = glm::vec3{currentPoseTransformation * glm::vec4{0.f, 0.f, 0.f, 1.f}};
+    currentPoseEstimate = changeInIMUEstimate * currentPoseEstimate;
   }
 
-  glm::mat4 getCurrentPoseTransformationEstimate() {
-    return getMatrixFormOfRoverPose(currentPoseEstimate);
-  }
-  
-  RoverPose getCurrentPoseEstimate() {
+  glm::mat4 getCurrentPoseEstimate() {
     return currentPoseEstimate;
   }
 
 private:
-  RoverPose currentPoseEstimate;
-  RoverPose previousIMUEstimate;
-
-  glm::mat4 getMatrixFormOfRoverPose(RoverPose& roverPose) {
-    glm::mat4 transformation{roverPose.rotation};
-    transformation = glm::translate(glm::mat4{1.f}, roverPose.translation) * transformation;
-    return transformation;
-  }
+  glm::mat4 currentPoseEstimate;
+  glm::mat4 previousIMUEstimate;
 };
 
 #endif

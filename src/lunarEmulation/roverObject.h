@@ -71,6 +71,10 @@ public:
     return model;
   }
 
+  glm::mat4 calculateModelMatrix() {
+    return calculateModelMatrix(position, front, up);
+  }
+
   // calculates the rotation matrix of this rover object relative to world space
   glm::mat3 calculateRotationMatrix() {
     glm::mat3 rot;
@@ -128,7 +132,7 @@ public:
   }
 
   glm::mat4 getMainRoverModelMatrix() {
-    return glm::scale(calculateModelMatrix(position, front, up), scale);
+    return glm::scale(calculateModelMatrix(), scale);
   }
 
   void draw(Shader& shader, int FBO = -1) {
