@@ -15,7 +15,7 @@ LZEngine engine{POINTCLOUD_SCAN_WIDTH, POINTCLOUD_SCAN_HEIGHT};
 RoverDepthDataPackage depthData;
 // visualization data blocks
 std::vector<glm::vec3> activeVoxels;
-// local map data blocks
+// buffer to store all voxels that became active recently and haven't successfully completed segmentation yet
 std::vector<long> recentlyActivatedVoxelIndices;
 
 // segmap classes initialization
@@ -180,7 +180,6 @@ int main(int argc, char const *argv[])
       }
       
       visualizeDataInEngine(); 
-
     }
 
     do {

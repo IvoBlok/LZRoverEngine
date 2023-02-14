@@ -105,20 +105,10 @@ namespace slam {
     glm::mat4 transformationEstimate = glm::eulerAngleZYX(transformation(2), transformation(1), transformation(0));
     transformationEstimate = glm::translate(glm::mat4{1.f}, glm::vec3{transformation(3), transformation(4), transformation(5)}) * transformationEstimate;
 
-    std::cout << "=========================\n";
-    std::cout << transformation.real()(0) << " " << transformation.real()(1) << " " << transformation.real()(2) << std::endl;
-    std::cout << transformation.real()(3) << " " << transformation.real()(4) << " " << transformation.real()(5) << std::endl;
-    std::cout << "matches: " << filteredDestinationVoxelCloud.size() << std::endl;
-
     // for debugging reasons, calculate the error this is supposed to have minimized
     float errorAfter = 0.f;
     for (size_t i = 0; i < filteredDestinationVoxelCloud.size(); i++) {
-
-      glm::vec4 misalignedmentVector = transformationEstimate * glm::vec4{filteredSourceCloud[i], 1.f} - glm::vec4{filteredDestinationVoxelCloud[i].centroid, 1.f};
-      glm::vec4 normalVector = glm::normalize(glm::vec4{filteredDestinationVoxelCloud[i].normal, 0.f});
-      
-      float extraError = std::pow(glm::dot(misalignedmentVector, normalVector), 2); 
-      //std::cout << "-> " << misalignedmentVector.x << " " << misalignedmentVector.y << " " << misalignedmentVector.z << " : " << normalVector.x << " " << normalVector.y << " " << normalVector.z << std::endl;
+      float extraError = std::pow(glm::dot(transformationEstimate * glm::vec4{filteredSourceCloud[i], 1.f} - glm::vec4{filteredDestinationVoxelCloud[i].centroid, 1.f}, glm::normalize(glm::vec4{filteredDestinationVoxelCloud[i].normal, 0.f})), 2); 
       errorAfter += extraError;
     }
 
@@ -127,8 +117,11 @@ namespace slam {
       errorBefore += std::pow(glm::dot((filteredSourceCloud[i] - filteredDestinationVoxelCloud[i].centroid), glm::normalize(filteredDestinationVoxelCloud[i].normal)), 2);  
     }
 
-    std::cout << "error before: " << errorBefore << std::endl;
-    std::cout << "error after: " << errorAfter << std::endl;
+    // if for some reason, the error has increased, instead of going down, we want to discard it, so that later iterations will have sufficiently decent matches to be successful
+    if(errorBefore < errorAfter) {
+      std::cout << "ICP has given an illogical solution, it is discarded and a identity 4x4 matrix is used instead. \n";
+      return glm::mat4{1.f};
+    }
 
     return transformationEstimate;
   }
