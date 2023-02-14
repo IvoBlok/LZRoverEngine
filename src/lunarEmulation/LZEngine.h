@@ -481,7 +481,7 @@ public:
     IMUPoseEstimate.translation = realPose.translation - initialRealPose.translation;
 
     // noise
-    if(applyNoise) { poseNoiseModelObj.applyIMUNoise(IMUPoseEstimate.rotation,IMUPoseEstimate.translation); }
+    // if(applyNoise) { poseNoiseModelObj.applyIMUNoise(IMUPoseEstimate.rotation,IMUPoseEstimate.translation); }
   }
 
   // function responsible for returning a copy of the 'initialRealPose' variable. 

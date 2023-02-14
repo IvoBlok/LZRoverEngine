@@ -1,15 +1,19 @@
 //#define EXPORTPOINTCLOUD
 //#define EXPORTIMAGE
 #include "lunarEmulation/LZEngine.h"
-#include "slam/dynamicVoxelGrid.h"
 #include "segmatch/normalEstimator.h"
 #include "segmatch/segmentation.h"
 #include "pathplanning/pathplanning.h"
+#include "slam/roverPoseEstimate.h"
+#include "slam/dynamicVoxelGrid.h"
 #include "slam/ICP.h"
 #include "settings.h"
 
 // Engine responsible for sensor emulation and debug window
 LZEngine engine{POINTCLOUD_SCAN_WIDTH, POINTCLOUD_SCAN_HEIGHT};
+
+// Class defining a simple system of enabling the correction of the error buildup of the positioning sensor on the rover
+RoverPoseEstimate roverPositionEstimate;
 
 // sensor data package definitions
 RoverDepthDataPackage depthData;
@@ -58,7 +62,7 @@ void applyDepthDataRegistration() {
       // translate form initial pose position
       depthData.pointclouds[i][j] += depthData.pose.translation;
 
-      // transform from relative to absolute purely for debug reasons
+      // transform from relative to absolute purely for debug/visualization reasons
       depthData.pointclouds[i][j] += initPoseTranslation;
       depthData.pointclouds[i][j] = inverseInitPoseRot * depthData.pointclouds[i][j];
     }
@@ -81,6 +85,8 @@ void applyDepthDataRegistration() {
 }
 
 void insertLocalMapToGlobalMap() {
+  std::cout << "global map insertion occured!\n";
+  
   // update globalmap with new entry
   globalMap.DVGs.push_back(localMap);
 
@@ -175,7 +181,6 @@ int main(int argc, char const *argv[])
       recentlyActivatedVoxelIndices = failedVoxels;
 
       if(frame % (FRAMES_PER_SCAN * SCANS_PER_LOCAL_MAP) == 0) {
-        std::cout << "global map insertion occured!\n";
         insertLocalMapToGlobalMap();
       }
       

@@ -54,7 +54,6 @@ namespace slam {
   glm::mat4 getTransformationEstimateBetweenPointclouds(std::vector<std::vector<glm::vec3>>& sourcePointcloudSet, DVG& destinationPointcloud) {
     
     if(destinationPointcloud.voxels.size() == 0 || sourcePointcloudSet.size() == 0 || sourcePointcloudSet[0].size() == 0) {
-      std::cout << "base matrix returned option 1!\n";
       return glm::mat4{1.f};
     }
     
@@ -63,7 +62,6 @@ namespace slam {
     std::vector<Voxel> filteredDestinationVoxelCloud;
 
     if(!findValidICPMatches(sourcePointcloudSet, destinationPointcloud, filteredSourceCloud, filteredDestinationVoxelCloud)) {
-      std::cout << "base matrix returned option 2!\n";
       return glm::mat4{1.f};
     }
 
