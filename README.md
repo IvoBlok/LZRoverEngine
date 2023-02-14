@@ -16,10 +16,10 @@ The techniques used for:
  - normal estimation
  - clustering
 
-these techniques are inspired, and if not just copied from a series of closely related papers, of which the main ones are listed below:
+are inspired, if not just in some cases copied from a series of closely related papers, of which the main ones are listed below:
  - 'SegMap: Segment-based mapping and localization using data-driven descriptors' DOI: 10.1177/0278364919863090
  - 'SegMatch: Segment Based Place Recognition in 3D Point Clouds' DOI: 10.1109/ICRA.2017.7989618
- - 'Incremental Segment-Based Localization in 3D Point Clouds' 
+ - 'Incremental Segment-Based Localization in 3D Point Clouds'  DOI: ???
 
 INSTALLATION
 ====================================
@@ -110,6 +110,13 @@ DEBUG CONTROLS
 ====================================
 For movement of the debug camera, use WASD to move in the plane defined by the debug camera's up direction as it's normal vector, and spacebar and left shift to move up and down the previously mentioned vector respectively.
 Some other controls can be modified from the settings.h file and/or might need to be enabled with another setting in the same file.
+
+DEBUGGING and/or PROFILING
+====================================
+For any future (and current) contributors to the codebase, this 'chapter' is intended to rougly document how to debug the program.
+So far the development of this project has been on windows 10 using WSL and VcXsrv to run it on Ubuntu 20.04. For debugging all things memory, the code is debugged and/or profiled using the built-in debugger of Visual Studio Code on a dedicated Ubuntu 20.04 machine by cloning the repo.
+
+Mainly for profiling and finding general issues, A windows version of the project can be made by means that are still to be documented (I have no clue how I managed to get it working), that can be built and run using Visual Studio. For profiling, I so far have been using Optick, see here: https://github.com/bombomby/optick. This requires you to make minor changes to the codebase to signal to Optick what you specifically want to profile, giving you more control of what you want to see and compare. To profile the executable using Optick, run the executable and start the optick GUI. If the modifications to the codebase we're done correct, Optick will start collecting profiling stuff. By starting the optick GUI as administrator, it can give you even finer detail (and seems to ignore all specifications to what functions you want to profile, and just include everything) on what's been happening.
 
 QUESTIONS / HELP
 ====================================
