@@ -39,8 +39,13 @@
 // SLAM
 // ============================
 // defines the amount of voxels per unit length, or in other words, this setting to the third power is the max possible amount of voxels in a unit volume, which in this case is set to be roughly 1 m^3
-#define RESOLUTION_DVG 40
+#define RESOLUTION_DVG 50
 // defines the amount of points that are required to have been stored in a single voxel for it to be considered active, and thus be used in the rest of the navigation solution
 #define REQUIRED_POINTCOUNT_TO_BECOME_ACTIVE 2
+
+// defines the max allowed distance squared (in base length units, which in this case is the meter) between the one point and the closest point of a pointcloud. If the distance is larger, the match will not be used in the rest of the ICP algorithm. This is advised to be on the same scale of the width of a voxel
+#define MAX_SQUARED_DISTANCE_BETWEEN_ICP_POINT_MATCH 0.04f
+// defines the minimum amount of matches found between the source and destination pointcloud that fullfill the requirements, needed to perform the rest of the ICP algorithm. This is to make sure the samples ICP is working with is large enought to be reliable and effective
+#define MIN_REQUIRED_ICP_MATCHES 20
 
 #endif

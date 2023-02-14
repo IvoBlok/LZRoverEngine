@@ -5,3 +5,5 @@ build/CMakeCache.txt
 build/CMakeFiles/LZRoverEngine.dir/depend.make
 build/CMakeFiles/LZRoverEngine.dir/src/main.cpp.o
 build/LZRoverEngine
+.vscode/**
+.vscode

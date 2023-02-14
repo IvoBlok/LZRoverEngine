@@ -27,7 +27,7 @@ void planPathAndMoveRover() {
   // boring path 'planning' solution to validate the rest of the solutions. This just moves the rover in a big circle
   // this should be replaced at some point by the path planning algorithm
   engine.updateDeltaTime();
-  engine.moveRoverInDirection(glm::vec3{std::cos(0.1f * glfwGetTime()), 0.f, std::sin(0.1f * glfwGetTime())}, 0.025f);
+  engine.moveRoverInDirection(glm::vec3{std::cos(0.1f * lastFrame), 0.f, std::sin(0.1f * lastFrame)}, 0.025f);
 
   // filter largest groundplane for the safe movement area
   // std::vector<glm::vec3> safeArea = pathplanning::getSafeMovementVoxels(globalMap);
@@ -120,6 +120,9 @@ void insertLocalMapToGlobalMap() {
   // Reset the local map/DVG
   localMap.empty();
   recentlyActivatedVoxelIndices.clear();
+
+  // Reset the data to visualize the clusters in the emulation engine, so that only the clusters in the local map are shown
+  engine.linesObjects.empty();
 }
 
 void visualizeDataInEngine() {
@@ -141,7 +144,7 @@ int main(int argc, char const *argv[])
 {
   engine.startEngine();
 
-  int frame = 0;
+  int frame = 1;
   while (true)
   {    
     planPathAndMoveRover();

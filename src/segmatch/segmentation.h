@@ -262,13 +262,14 @@ namespace Segmentation {
   void loadClusterNormalsIntoEngine(std::vector<DVG>& dvgs, LZEngine& engine) {
     // horrible algorithm for visualization, scales terribly with time
     int index = 0;
+
     for (auto dvg = dvgs.begin(); dvg != dvgs.end(); dvg++) {
       for (auto cluster = dvg->groundplaneClusters.rbegin(); cluster != dvg->groundplaneClusters.rend(); cluster++) {
         // if a new cluster has been added since last time, make a new line rendering group
         if(index >= engine.linesObjects.size()) { 
           engine.linesObjects.push_back(LineMesh{}); 
-          engine.linesObjects[index].color = glm::vec3{(float)rand()/(float)RAND_MAX, 0.f, 0.f};
         }
+        engine.linesObjects[index].color = glm::vec3{0.2f + 0.8f * (float)rand()/(float)RAND_MAX, 0.f, 0.f};
 
         // load the normals for the current cluster
         std::vector<glm::vec3> normals;
@@ -287,8 +288,8 @@ namespace Segmentation {
         // if a new cluster has been added since last time, make a new line rendering group
         if(index >= engine.linesObjects.size()) { 
           engine.linesObjects.push_back(LineMesh{}); 
-          engine.linesObjects[index].color = glm::vec3{0.f, (float)rand()/(float)RAND_MAX, (float)rand()/(float)RAND_MAX};
         }
+        engine.linesObjects[index].color = glm::vec3{0.f, 0.3f + 0.7f * (float)rand()/(float)RAND_MAX, 0.3f + 0.7f * (float)rand()/(float)RAND_MAX};
 
         // load the normals for the current cluster
         std::vector<glm::vec3> normals;
