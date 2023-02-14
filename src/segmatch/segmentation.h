@@ -4,15 +4,10 @@
 #include "../slam/dynamicVoxelGrid.h"
 #include "normalEstimator.h"
 #include "../lunarEmulation/LZEngine.h"
+#include "../settings.h"
 
 #include <vector>
 #include <map>
-
-#define CAN_GROW_TO_VOXEL_ANGLE_THRESHOLD 12.f
-#define MAX_ALLOWED_SEED_CURVATURE 0.18f
-#define CLUSTERING_GROUNDPLANE_NEIGHBOUR_SEARCH_RADIUS 2
-#define CLUSTERING_OBSTACLE_NEIGHBOUR_SEARCH_RADIUS 1
-#define MIN_VOXEL_COUNT_TO_BECOME_SEGMENT 10000
 
 namespace Segmentation {
 
@@ -104,7 +99,7 @@ namespace Segmentation {
 
 
     // check if the merge has pushed the cluster over the minimum voxel count to become a segment
-    if(!clusterToCopyTo->isSegment && clusterToCopyTo->voxelIndices.size() >= MIN_VOXEL_COUNT_TO_BECOME_SEGMENT)
+    if(!clusterToCopyTo->isSegment && clusterToCopyTo->voxelIndices.size() >= MINIMUM_VOXEL_COUNT_TO_BECOME_SEGMENT)
       convertClusterToSegment(clusterToCopyTo);
 
     // remove the copied cluster
@@ -126,7 +121,7 @@ namespace Segmentation {
     cluster->voxelIndices.push_back(voxel->index);
     
     // if this addition of a voxel to the cluster means that the cluster has reached the segment threshold, convert it to a segment
-    if(cluster->voxelIndices.size() == MIN_VOXEL_COUNT_TO_BECOME_SEGMENT) {
+    if(cluster->voxelIndices.size() == MINIMUM_VOXEL_COUNT_TO_BECOME_SEGMENT) {
       convertClusterToSegment(cluster);
     }
     // update the clusterID of the voxel (supposedly) in the DVG
@@ -149,7 +144,7 @@ namespace Segmentation {
     while(seeds.size() > 0) {
       Voxel* seed = seeds.front(); seeds.pop_front();
 
-      std::vector<Voxel*> neighbours = dvg.getNeighbours(dvg.getIndexFromPoint(seed->centroid), CLUSTERING_GROUNDPLANE_NEIGHBOUR_SEARCH_RADIUS);
+      std::vector<Voxel*> neighbours = dvg.getNeighbours(dvg.getIndexFromPoint(seed->centroid), GROUNDPLANE_CLUSTERING_NEIGHBOUR_SEARCH_RADIUS);
 
       for (int j = 0; j < neighbours.size(); j++) {
         // check if the neighbour isn't already part of the new cluster AND
@@ -219,7 +214,7 @@ namespace Segmentation {
     while(seeds.size() > 0) {
       Voxel* seed = seeds.front(); seeds.pop_front();
 
-      std::vector<Voxel*> neighbours = dvg.getNeighbours(dvg.getIndexFromPoint(seed->centroid), CLUSTERING_OBSTACLE_NEIGHBOUR_SEARCH_RADIUS);
+      std::vector<Voxel*> neighbours = dvg.getNeighbours(dvg.getIndexFromPoint(seed->centroid), OBSTACLE_CLUSTERING_NEIGHBOUR_SEARCH_RADIUS);
       
       for (int j = 0; j < neighbours.size(); j++) {
         // filter out neighbours that are already part of the new cluster AND

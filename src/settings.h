@@ -48,4 +48,18 @@
 // defines the minimum amount of matches found between the source and destination pointcloud that fullfill the requirements, needed to perform the rest of the ICP algorithm. This is to make sure the samples ICP is working with is large enought to be reliable and effective
 #define MIN_REQUIRED_ICP_MATCHES 20
 
+
+// SEGMENTATION
+// ============================
+// defines the maximum angle in degrees between the normal of two voxels that allows them to directly be merged into the same cluster
+#define CAN_GROW_TO_VOXEL_ANGLE_THRESHOLD 12.f
+// defines the maximum curvature of the surface around a specific voxel, for it to be able to be a seed voxel for growing a cluster
+#define MAX_ALLOWED_SEED_CURVATURE 0.18f
+// defines the radius around a given voxel that is searched to find its neighbours in the groundplane clustering steps. a radius of of 2 for example, will search for all voxels that are in the square with width 4 centered at the main voxel
+#define GROUNDPLANE_CLUSTERING_NEIGHBOUR_SEARCH_RADIUS 2
+// defines the radius around a given voxel that is searched to find its neighbours in the obstacle clustering steps. a radius of of 2 for example, will search for all voxels that are in the square with width 4 centered at the main voxel
+#define OBSTACLE_CLUSTERING_NEIGHBOUR_SEARCH_RADIUS 1
+// defines the required amount of voxels a cluster needs to be considered a segment, and thus be used in the iSAM2 based localization improvements
+#define MINIMUM_VOXEL_COUNT_TO_BECOME_SEGMENT 10000
+
 #endif
