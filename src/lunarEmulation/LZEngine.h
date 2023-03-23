@@ -465,7 +465,7 @@ public:
     IMUPoseEstimate = realPose * glm::inverse(initialRealPose);
 
     // noise
-    // TODO replacing noise system | if(applyNoise) { poseNoiseModelObj.applyIMUNoise(IMUPoseEstimate.rotation,IMUPoseEstimate.translation); }
+    if(applyNoise) { poseNoiseModelObj.applyIMUNoise(IMUPoseEstimate); }
   }
 
   // function responsible for returning a copy of the 'initialRealPose' variable. 

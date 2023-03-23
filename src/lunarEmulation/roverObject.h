@@ -54,8 +54,6 @@ public:
     // default sensor configurations
     addOpticalCamera(glm::vec3{0.075f, 0.09f, 0.f}, front, up);
     addDepthCamera(glm::vec3{0.075f, 0.09f, 0.f}, front, up);
-    //addDepthCamera(glm::vec3{0.f, 0.1f, 0.02f}, glm::rotate(front, glm::radians(-22.5f), up), glm::rotate(up, glm::radians(-5.f), glm::cross(front, up)));
-    //addDepthCamera(glm::vec3{0.f, 0.1f, -0.02f}, glm::rotate(front, glm::radians(22.5f), up), glm::rotate(up, glm::radians(-5.f), glm::cross(front, up)));
   }
 
   // given the relevant model data, this returns the transformation matrix from world space to model space

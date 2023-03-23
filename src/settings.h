@@ -23,7 +23,7 @@
 // EMULATION ENGINE
 // ============================
 // defines if synthetic noise will be added to both the pointcloud measurements of the environment and the relative positioning of the rover
-#define APPLY_SYNTHETIC_NOISE_TO_EMULATED_SENSORS false
+#define APPLY_SYNTHETIC_NOISE_TO_EMULATED_SENSORS true
 // defines the resolution of the pointcloud in the horizontal direction relative to the sensor. the resulting pointcloud can have less width then this setting due to there being no surface to see at the edge(s)
 #define POINTCLOUD_SCAN_WIDTH 60
 // defines the resolution of the pointcloud in the vertical direction relative to the sensor. the resulting pointcloud is likely to have less height then this setting due to there being no surface to see at the edge(s)
@@ -44,9 +44,9 @@
 #define REQUIRED_POINTCOUNT_TO_BECOME_ACTIVE 2
 
 // defines the max allowed distance squared (in base length units, which in this case is the meter) between the one point and the closest point of a pointcloud. If the distance is larger, the match will not be used in the rest of the ICP algorithm. This is advised to be on the same scale of the width of a voxel
-#define MAX_SQUARED_DISTANCE_BETWEEN_ICP_POINT_MATCH 0.04f
+#define MAX_SQUARED_DISTANCE_BETWEEN_ICP_POINT_MATCH 0.025f
 // defines the minimum amount of matches found between the source and destination pointcloud that fullfill the requirements, needed to perform the rest of the ICP algorithm. This is to make sure the samples ICP is working with is large enought to be reliable and effective
-#define MIN_REQUIRED_ICP_MATCHES 20
+#define MIN_REQUIRED_ICP_MATCHES 200
 
 
 // SEGMENTATION

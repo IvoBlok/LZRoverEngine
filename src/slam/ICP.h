@@ -117,7 +117,7 @@ namespace slam {
 
     // if for some reason, the error has increased, instead of going down, we want to discard it, so that later iterations will have sufficiently decent matches to be successful
     if(errorBefore < errorAfter) {
-      std::cout << "ICP has given an illogical solution, it is discarded and a identity 4x4 matrix is used instead. \n";
+      std::cout << "The required transformation was outside the at least one of limitations of this approach to ICP (most likely the linearization simplification). The result is discarded and an identity 4x4 matrix is used instead. \n";
       return glm::mat4{1.f};
     }
 

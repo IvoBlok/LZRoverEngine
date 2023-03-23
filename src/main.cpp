@@ -65,23 +65,22 @@ void applyDepthDataRegistration() {
     }
   }
 
-  // Calculate the transformation from the new pointcloud with the estimated pose applied, to the current local map with partial ICP. 
-  // The resulting matrix is the result of noise in mainly the Pose measuring device. ICP inherently also doesn't get to the exact answer, but it should be enough for this application
-  glm::mat4 transformationEstimate = slam::getTransformationEstimateBetweenPointclouds(depthData.pointclouds, localMap);
-  
-  // update where the software thinks the rover is at, thus improving the accuracy of the localization
-  roverPoseEstimate.modifyCurrentPoseEstimate(transformationEstimate);
+  // run the iterative process of ICP a certain amount of times
+  for(int j = 0; j < 3; j++) {
+    // Calculate the transformation from the new pointcloud with the estimated pose applied, to the current local map with partial ICP. 
+    // The resulting matrix is the result of noise in mainly the Pose measuring device. ICP inherently also doesn't get to the exact answer, but it should be enough for this application
+    glm::mat4 transformationEstimate = slam::getTransformationEstimateBetweenPointclouds(depthData.pointclouds, localMap);
+    
+    // update where the software thinks the rover is at, thus improving the accuracy of the localization
+    roverPoseEstimate.modifyCurrentPoseEstimate(transformationEstimate);
 
-  // Apply the newly found transformation matrix, and push the new pointcloud to the local DVG
-  for (size_t i = 0; i < depthData.pointclouds.size(); i++){
-    for (size_t j = 0; j < depthData.pointclouds[i].size(); j++) {
-      depthData.pointclouds[i][j] = transformationEstimate * glm::vec4{depthData.pointclouds[i][j], 1.f};
+    // Apply the newly found transformation matrix, and push the new pointcloud to the local DVG
+    for (size_t i = 0; i < depthData.pointclouds.size(); i++){
+      for (size_t j = 0; j < depthData.pointclouds[i].size(); j++) {
+        depthData.pointclouds[i][j] = transformationEstimate * glm::vec4{depthData.pointclouds[i][j], 1.f};
+      }
     }
   }
-  
-  // Update the position the software thinks the rover is at with this new estimate
-  // .....
-  // TODO
 }
 
 void insertLocalMapToGlobalMap() {

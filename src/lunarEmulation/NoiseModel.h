@@ -17,7 +17,11 @@ public:
   PoseNoiseModel(glm::mat3 rot = glm::mat3{1.f}, glm::vec3 trans = glm::vec3{0.f}, glm::mat3 rotGuess = glm::mat3{1.f}, glm::vec3 transGuess = glm::vec3{0.f}) 
   : lastRotation(rot), lastTranslation(trans), lastRotationGuess(rotGuess), lastTranslationGuess(transGuess) {}
 
-  void applyIMUNoise(glm::mat3& rotation, glm::vec3& translation) {
+  void applyIMUNoise(glm::mat4& transformation) {
+
+    glm::mat3 rotation{transformation};
+    glm::vec3 translation = glm::vec3{transformation * glm::vec4{0.f, 0.f, 0.f, 1.f}};
+
     // exact non drifted delta values
     glm::mat3 deltaRotation = rotation * glm::inverse(lastRotation);
     glm::vec3 deltaTranslation = translation - lastTranslation;
@@ -55,6 +59,9 @@ public:
     // calculate new estimate
     rotation = deltaRotation * lastRotationGuess;
     translation = glm::inverse(rotation) * deltaTranslation + lastTranslationGuess;
+
+    transformation = glm::mat4{rotation};
+    transformation = glm::translate(glm::mat4{1.f}, translation) * transformation;
 
     // update estimates state
     lastRotationGuess = rotation;
