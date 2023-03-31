@@ -26,8 +26,8 @@ public:
   }
 
 private:
-  glm::mat4 currentPoseEstimate;
-  glm::mat4 previousIMUEstimate;
+  glm::mat4 currentPoseEstimate = glm::mat4{1.f};
+  glm::mat4 previousIMUEstimate = glm::mat4{1.f};
 };
 
 #endif

@@ -3,6 +3,8 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtx/euler_angles.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/string_cast.hpp>
 
 #include <eigen3/Eigen/QR>
 #include <eigen3/Eigen/Dense>
@@ -12,34 +14,36 @@
 #include <cmath>
 
 #include "dynamicVoxelGrid.h"
+#include "../slam/KDTree.h"
 #include "../settings.h"
+
 
 namespace slam {
 
-  // currently this function uses the naive and horribly scaling approach of just iterating over all points in the dvg and checking if it is closer then the ones before
-  glm::vec3 findClosestVoxelInDVG(glm::vec3 position, DVG& dvg, float& distanceSquared, Voxel& closestVoxel) {
-    float distanceSquaredToClosestVoxel = -1.f;
+  float getScaledPointToRayDistanceSquared(glm::vec3 rayOrigin, glm::vec3 rayDirection, glm::vec3 point) {
+    float scalingFactor = glm::dot(rayDirection, point - rayOrigin);
+    
+    // account for the fact that a ray has a starting point and not an end point
+    if(scalingFactor < 0) 
+      scalingFactor = 0;
 
-    for(auto& voxel : dvg.voxels) {
-      float squaredDistance = std::pow(glm::length(voxel.centroid - position),2);
-      if(squaredDistance < distanceSquaredToClosestVoxel || distanceSquaredToClosestVoxel < 0.f) {
-        distanceSquaredToClosestVoxel = squaredDistance;
-        closestVoxel = voxel;
-      }
-    }
+    glm::vec3 pointToClosestPointOnRay = point - (rayOrigin + scalingFactor * rayDirection);
+    return glm::dot(pointToClosestPointOnRay, pointToClosestPointOnRay);
+  }
 
-    distanceSquared = distanceSquaredToClosestVoxel;
-    return closestVoxel.centroid;
+  // searches through 3D tree for the closest voxel
+  void findClosestVoxelInDVG(glm::vec3& sourcePoint, DVG& dvg, Voxel& closestVoxel) {
+    closestVoxel = *dvg.tree->nearest(sourcePoint);
   }
  
   bool findValidICPMatches(std::vector<std::vector<glm::vec3>>& sourceCloud, DVG& destinationCloud, std::vector<glm::vec3>& filteredSourceCloud, std::vector<Voxel>& filteredDestinationCloud) {
-    float distance;
     Voxel matchingVoxel;
 
     for(auto& sourceCloudRow : sourceCloud) {
-      for(auto& sourceCloudElement : sourceCloudRow) {
-        findClosestVoxelInDVG(sourceCloudElement, destinationCloud, distance, matchingVoxel);
-        if(distance < MAX_SQUARED_DISTANCE_BETWEEN_ICP_POINT_MATCH && matchingVoxel.normal != glm::vec3{0.f}) {
+      for(glm::vec3& sourceCloudElement : sourceCloudRow) {
+        findClosestVoxelInDVG(sourceCloudElement, destinationCloud, matchingVoxel);
+        if(glm::dot(matchingVoxel.normal, matchingVoxel.normal) > 0
+        && destinationCloud.tree->distance() < MAX_SQUARED_DISTANCE_BETWEEN_ICP_POINT_MATCH) {
           filteredSourceCloud.push_back(sourceCloudElement);
           filteredDestinationCloud.push_back(matchingVoxel);
         }
@@ -64,7 +68,7 @@ namespace slam {
     if(!findValidICPMatches(sourcePointcloudSet, destinationPointcloud, filteredSourceCloud, filteredDestinationVoxelCloud)) {
       return glm::mat4{1.f};
     }
-
+    
     // now that the inputs are ready, start by constructing the A and b required to solve the matrix equation which is equivalent to the ICP problem
     Eigen::MatrixXf A{(int)filteredDestinationVoxelCloud.size(), 6};
     Eigen::VectorXf b{(int)filteredDestinationVoxelCloud.size()};
@@ -99,6 +103,10 @@ namespace slam {
     Eigen::MatrixXf pseudoInverseA = A.completeOrthogonalDecomposition().pseudoInverse();
     Eigen::VectorXf transformation = pseudoInverseA * b;
 
+    //std::cout << A << std::endl << std::endl;
+    //std::cout << pseudoInverseA << std::endl << std::endl;
+    //std::cout << transformation << std::endl;
+
     // go from the 6 elements in a vector describing the transformation to an actual 4x4 transformation matrix
     glm::mat4 transformationEstimate = glm::eulerAngleZYX(transformation(2), transformation(1), transformation(0));
     transformationEstimate = glm::translate(glm::mat4{1.f}, glm::vec3{transformation(3), transformation(4), transformation(5)}) * transformationEstimate;
@@ -106,7 +114,7 @@ namespace slam {
     // for debugging reasons, calculate the error this is supposed to have minimized
     float errorAfter = 0.f;
     for (size_t i = 0; i < filteredDestinationVoxelCloud.size(); i++) {
-      float extraError = std::pow(glm::dot(transformationEstimate * glm::vec4{filteredSourceCloud[i], 1.f} - glm::vec4{filteredDestinationVoxelCloud[i].centroid, 1.f}, glm::normalize(glm::vec4{filteredDestinationVoxelCloud[i].normal, 0.f})), 2); 
+      float extraError = std::pow(glm::dot((glm::vec3{transformationEstimate * glm::vec4{filteredSourceCloud[i], 1.f}} - filteredDestinationVoxelCloud[i].centroid), glm::normalize(filteredDestinationVoxelCloud[i].normal)), 2); 
       errorAfter += extraError;
     }
 

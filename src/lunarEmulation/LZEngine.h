@@ -457,7 +457,7 @@ public:
   // function responsible for updating the Rover Pose Estimate to the current state. 
   // This function includes the drifting effect of numerically aproximating an integral.
   // =============================================
-  void updateIMUEstimate(bool applyNoise = true) {  
+  void updateIMUEstimate(bool applyNoise = APPLY_SYNTHETIC_NOISE_TO_EMULATED_SENSORS) {  
     // update realPose, which transforms points from rover space to world space
     realPose = roverObject.calculateModelMatrix();
 

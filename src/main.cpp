@@ -7,6 +7,8 @@
 #include "slam/ICP.h"
 #include "settings.h"
 
+#include <glm/gtx/string_cast.hpp>
+
 // Engine responsible for sensor emulation and debug window
 LZEngine engine{POINTCLOUD_SCAN_WIDTH, POINTCLOUD_SCAN_HEIGHT};
 
@@ -61,16 +63,24 @@ void applyDepthDataRegistration() {
       depthData.pointclouds[i][j] = engine.getInitialRealPose() * glm::vec4{depthData.pointclouds[i][j], 1.f};
 
       // transform from rover space to initial pose space, where with 'initial pose space' the 3D space with principal axes aligned with those of the initial pose of the rover
-      depthData.pointclouds[i][j] = depthData.pose * glm::vec4{depthData.pointclouds[i][j], 1.f};
+      depthData.pointclouds[i][j] = roverPoseEstimate.getCurrentPoseEstimate() * glm::vec4{depthData.pointclouds[i][j], 1.f};
     }
   }
+  
+  // TODO update the way the KDtree is updated, instead of fully recalculating it
+  // calculate the KDTree structure variant of the DVG in question
+  localMap.tree = new KDTree(localMap.voxels);
+
+  std::cout << "====================\n";
 
   // run the iterative process of ICP a certain amount of times
   for(int j = 0; j < 3; j++) {
     // Calculate the transformation from the new pointcloud with the estimated pose applied, to the current local map with partial ICP. 
     // The resulting matrix is the result of noise in mainly the Pose measuring device. ICP inherently also doesn't get to the exact answer, but it should be enough for this application
     glm::mat4 transformationEstimate = slam::getTransformationEstimateBetweenPointclouds(depthData.pointclouds, localMap);
-    
+
+    std::cout << glm::to_string(transformationEstimate) << std::endl;
+
     // update where the software thinks the rover is at, thus improving the accuracy of the localization
     roverPoseEstimate.modifyCurrentPoseEstimate(transformationEstimate);
 
