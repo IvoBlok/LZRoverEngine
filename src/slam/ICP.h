@@ -19,7 +19,6 @@
 
 
 namespace slam {
-
   float getScaledPointToRayDistanceSquared(glm::vec3 rayOrigin, glm::vec3 rayDirection, glm::vec3 point) {
     float scalingFactor = glm::dot(rayDirection, point - rayOrigin);
     
@@ -55,9 +54,10 @@ namespace slam {
   // haven't looked into it too much, but I (Ivo) was planning on basing the ICP implementation on the one presented in the following paper:
   // https://www.comp.nus.edu.sg/~lowkl/publications/lowk_point-to-plane_icp_techrep.pdf
   // implementation is strongly inspired by the one here: https://github.com/agnivsen/icp/blob/master/basicICP.py
-  glm::mat4 getTransformationEstimateBetweenPointclouds(std::vector<std::vector<glm::vec3>>& sourcePointcloudSet, DVG& destinationPointcloud) {
+  glm::mat4 getTransformationEstimateBetweenPointclouds(std::vector<std::vector<glm::vec3>>& sourcePointcloudSet, DVG& destinationPointcloud, float& errorChange) {
     
     if(destinationPointcloud.voxels.size() == 0 || sourcePointcloudSet.size() == 0 || sourcePointcloudSet[0].size() == 0) {
+      errorChange = 0;
       return glm::mat4{1.f};
     }
     
@@ -66,6 +66,7 @@ namespace slam {
     std::vector<Voxel> filteredDestinationVoxelCloud;
 
     if(!findValidICPMatches(sourcePointcloudSet, destinationPointcloud, filteredSourceCloud, filteredDestinationVoxelCloud)) {
+      errorChange = 0;
       return glm::mat4{1.f};
     }
     
@@ -103,10 +104,6 @@ namespace slam {
     Eigen::MatrixXf pseudoInverseA = A.completeOrthogonalDecomposition().pseudoInverse();
     Eigen::VectorXf transformation = pseudoInverseA * b;
 
-    //std::cout << A << std::endl << std::endl;
-    //std::cout << pseudoInverseA << std::endl << std::endl;
-    //std::cout << transformation << std::endl;
-
     // go from the 6 elements in a vector describing the transformation to an actual 4x4 transformation matrix
     glm::mat4 transformationEstimate = glm::eulerAngleZYX(transformation(2), transformation(1), transformation(0));
     transformationEstimate = glm::translate(glm::mat4{1.f}, glm::vec3{transformation(3), transformation(4), transformation(5)}) * transformationEstimate;
@@ -126,9 +123,11 @@ namespace slam {
     // if for some reason, the error has increased, instead of going down, we want to discard it, so that later iterations will have sufficiently decent matches to be successful
     if(errorBefore < errorAfter) {
       std::cout << "The required transformation was outside the at least one of limitations of this approach to ICP (most likely the linearization simplification). The result is discarded and an identity 4x4 matrix is used instead. \n";
+      errorChange = 0;
       return glm::mat4{1.f};
     }
-
+    
+    errorChange = errorAfter - errorBefore;
     return transformationEstimate;
   }
 };

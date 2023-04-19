@@ -73,24 +73,37 @@ void applyDepthDataRegistration() {
 
   std::cout << "====================\n";
 
-  // run the iterative process of ICP a certain amount of times
-  for(int j = 0; j < 3; j++) {
+  // run the iterative process of ICP as long as the error keeps decreasing fast enough
+  float lastErrorChange = -1.f;
+  float currentErrorChange = -1.f;
+  float errorChangeReduction = -1.f;
+  while((errorChangeReduction < 0.f) || (errorChangeReduction < MAX_ERROR_CHANGE_DECREASE_BETWEEN_ICP_ITERATIONS )) {
     // Calculate the transformation from the new pointcloud with the estimated pose applied, to the current local map with partial ICP. 
     // The resulting matrix is the result of noise in mainly the Pose measuring device. ICP inherently also doesn't get to the exact answer, but it should be enough for this application
-    glm::mat4 transformationEstimate = slam::getTransformationEstimateBetweenPointclouds(depthData.pointclouds, localMap);
+    glm::mat4 transformationEstimate = slam::getTransformationEstimateBetweenPointclouds(depthData.pointclouds, localMap, currentErrorChange);
+    
+    errorChangeReduction = currentErrorChange / lastErrorChange;
+    lastErrorChange = currentErrorChange;
 
-    std::cout << glm::to_string(transformationEstimate) << std::endl;
+    if(transformationEstimate == glm::mat4{1.f}) {
+      errorChangeReduction = MAX_ERROR_CHANGE_DECREASE_BETWEEN_ICP_ITERATIONS * 2; // handwavy way of ensuring that this will be the last ICP iteration in this situation
+    } else {
+      // update where the software thinks the rover is at, thus improving the accuracy of the localization
+      roverPoseEstimate.modifyCurrentPoseEstimate(transformationEstimate);
 
-    // update where the software thinks the rover is at, thus improving the accuracy of the localization
-    roverPoseEstimate.modifyCurrentPoseEstimate(transformationEstimate);
-
-    // Apply the newly found transformation matrix, and push the new pointcloud to the local DVG
-    for (size_t i = 0; i < depthData.pointclouds.size(); i++){
-      for (size_t j = 0; j < depthData.pointclouds[i].size(); j++) {
-        depthData.pointclouds[i][j] = transformationEstimate * glm::vec4{depthData.pointclouds[i][j], 1.f};
+      // Apply the newly found transformation matrix, and push the new pointcloud to the local DVG
+      for (size_t i = 0; i < depthData.pointclouds.size(); i++){
+        for (size_t j = 0; j < depthData.pointclouds[i].size(); j++) {
+          depthData.pointclouds[i][j] = transformationEstimate * glm::vec4{depthData.pointclouds[i][j], 1.f};
+        }
       }
+      std::cout << "error ratio: " << errorChangeReduction << std::endl;
     }
+    std::cout << "Optimal transformation proposed by last ICP iteration: \n" << glm::to_string(transformationEstimate) << std::endl;
   }
+
+  // Update Local DVG and update the buffer layers of the new active voxels
+  localMap.insertPoints(depthData.pointclouds, recentlyActivatedVoxelIndices);
 }
 
 void insertLocalMapToGlobalMap() {
@@ -140,7 +153,7 @@ void insertLocalMapToGlobalMap() {
   engine.linesObjects.empty();
 }
 
-void visualizeDataInEngine() {
+void loadVisualizationDataInEngine() {
   // export LOCAL active voxels to render engine
   //localDVG.getVoxelsForVisualization(activeVoxels);
   //engine.setDVG(activeVoxels, 0);
@@ -168,9 +181,6 @@ int main(int argc, char const *argv[])
     {
       applyDepthDataRegistration();
 
-      // Update Local DVG and update the buffer layers of the new active voxels
-      localMap.insertPoints(depthData.pointclouds, recentlyActivatedVoxelIndices);
-
       // Incremental Normal Estimation
       std::vector<long> failedVoxels;
       NormalEstimator::calculateNormalsWithCovarianceMatrix(localMap, recentlyActivatedVoxelIndices, failedVoxels);
@@ -190,7 +200,7 @@ int main(int argc, char const *argv[])
         insertLocalMapToGlobalMap();
       }
       
-      visualizeDataInEngine(); 
+      loadVisualizationDataInEngine(); 
     }
 
     do {

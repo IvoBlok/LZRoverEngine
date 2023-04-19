@@ -47,14 +47,15 @@
 #define MAX_SQUARED_DISTANCE_BETWEEN_ICP_POINT_MATCH 0.025f
 // defines the minimum amount of matches found between the source and destination pointcloud that fullfill the requirements, needed to perform the rest of the ICP algorithm. This is to make sure the samples ICP is working with is large enought to be reliable and effective
 #define MIN_REQUIRED_ICP_MATCHES 200
-
+// defines the minimum value, required for a next ICP iteration to be started, of the ratio of the last iteration change in error and the previous last one. This is equivalent to stopping the iterative process when it seems like the error has converged.
+#define MAX_ERROR_CHANGE_DECREASE_BETWEEN_ICP_ITERATIONS 0.85f
 
 // SEGMENTATION
 // ============================
 // defines the maximum angle in degrees between the normal of two voxels that allows them to directly be merged into the same cluster
 #define CAN_GROW_TO_VOXEL_ANGLE_THRESHOLD 12.f
 // defines the maximum curvature of the surface around a specific voxel, for it to be able to be a seed voxel for growing a cluster
-#define MAX_ALLOWED_SEED_CURVATURE 0.18f
+#define MAX_ALLOWED_SEED_CURVATURE 0.25f
 // defines the radius around a given voxel that is searched to find its neighbours in the groundplane clustering steps. a radius of of 2 for example, will search for all voxels that are in the square with width 4 centered at the main voxel
 #define GROUNDPLANE_CLUSTERING_NEIGHBOUR_SEARCH_RADIUS 2
 // defines the radius around a given voxel that is searched to find its neighbours in the obstacle clustering steps. a radius of of 2 for example, will search for all voxels that are in the square with width 4 centered at the main voxel
