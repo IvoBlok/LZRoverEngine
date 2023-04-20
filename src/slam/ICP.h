@@ -14,22 +14,12 @@
 #include <cmath>
 
 #include "dynamicVoxelGrid.h"
+#include "roverPoseEstimate.h"
 #include "../slam/KDTree.h"
 #include "../settings.h"
 
 
 namespace slam {
-  float getScaledPointToRayDistanceSquared(glm::vec3 rayOrigin, glm::vec3 rayDirection, glm::vec3 point) {
-    float scalingFactor = glm::dot(rayDirection, point - rayOrigin);
-    
-    // account for the fact that a ray has a starting point and not an end point
-    if(scalingFactor < 0) 
-      scalingFactor = 0;
-
-    glm::vec3 pointToClosestPointOnRay = point - (rayOrigin + scalingFactor * rayDirection);
-    return glm::dot(pointToClosestPointOnRay, pointToClosestPointOnRay);
-  }
-
   // searches through 3D tree for the closest voxel
   void findClosestVoxelInDVG(glm::vec3& sourcePoint, DVG& dvg, Voxel& closestVoxel) {
     closestVoxel = *dvg.tree->nearest(sourcePoint);
@@ -120,15 +110,42 @@ namespace slam {
       errorBefore += std::pow(glm::dot((filteredSourceCloud[i] - filteredDestinationVoxelCloud[i].centroid), glm::normalize(filteredDestinationVoxelCloud[i].normal)), 2);  
     }
 
-    // if for some reason, the error has increased, instead of going down, we want to discard it, so that later iterations will have sufficiently decent matches to be successful
+    // if for some reason, the error has increased, instead of going down, it is likely to be due to the fact that the optimal transformation is just the 4x4 I matrix.
     if(errorBefore < errorAfter) {
-      std::cout << "The required transformation was outside the at least one of limitations of this approach to ICP (most likely the linearization simplification). The result is discarded and an identity 4x4 matrix is used instead. \n";
+      if(PRINT_ICP_DEBUG_INFO) {std::cout << "4x4 I matrix returned. \nError increased by: " << errorAfter - errorBefore << " \ntotal error before: " << errorBefore << "\n";}
       errorChange = 0;
       return glm::mat4{1.f};
     }
     
-    errorChange = errorAfter - errorBefore;
+    errorChange = errorBefore - errorAfter;
     return transformationEstimate;
+  }
+
+  void ICP(std::vector<std::vector<glm::vec3>>& pointclouds, DVG& localMap, RoverPoseEstimate& roverPoseEstimate) {
+    // run the iterative process of ICP as long as the error keeps decreasing fast enough
+    float lastErrorChange = -1.f;
+    while((lastErrorChange == -1.f) || lastErrorChange > MIN_ERROR_DECREASE_PER_ICP_ITERATION) {
+      // Calculate the transformation from the new pointcloud with the estimated pose applied, to the current local map with partial ICP. 
+      // The resulting matrix is the result of noise in mainly the Pose measuring device. ICP inherently also doesn't get to the exact answer, but it should be enough for this application
+      glm::mat4 transformationEstimate = getTransformationEstimateBetweenPointclouds(pointclouds, localMap, lastErrorChange);
+      
+
+      if(transformationEstimate == glm::mat4{1.f}) {
+        lastErrorChange = MIN_ERROR_DECREASE_PER_ICP_ITERATION * 0.5f; // handwavy way of ensuring that this will be the last ICP iteration in this situation
+      } else {
+        // update where the software thinks the rover is at, thus improving the accuracy of the localization
+        roverPoseEstimate.modifyCurrentPoseEstimate(transformationEstimate);
+
+        // Apply the newly found transformation matrix, and push the new pointcloud to the local DVG
+        for (size_t i = 0; i < pointclouds.size(); i++){
+          for (size_t j = 0; j < pointclouds[i].size(); j++) {
+            pointclouds[i][j] = transformationEstimate * glm::vec4{pointclouds[i][j], 1.f};
+          }
+        }
+        if(PRINT_ICP_DEBUG_INFO) {std::cout << "error change: " << lastErrorChange << std::endl;}
+      }
+      if(PRINT_ICP_DEBUG_INFO) {std::cout << "Optimal transformation proposed by last ICP iteration: \n" << glm::to_string(transformationEstimate) << std::endl;}
+    }
   }
 };
 

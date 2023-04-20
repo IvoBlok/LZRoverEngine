@@ -38,6 +38,8 @@
 
 // SLAM
 // ============================
+
+#define PRINT_ICP_DEBUG_INFO true
 // defines the amount of voxels per unit length, or in other words, this setting to the third power is the max possible amount of voxels in a unit volume, which in this case is set to be roughly 1 m^3
 #define RESOLUTION_DVG 50
 // defines the amount of points that are required to have been stored in a single voxel for it to be considered active, and thus be used in the rest of the navigation solution
@@ -48,7 +50,7 @@
 // defines the minimum amount of matches found between the source and destination pointcloud that fullfill the requirements, needed to perform the rest of the ICP algorithm. This is to make sure the samples ICP is working with is large enought to be reliable and effective
 #define MIN_REQUIRED_ICP_MATCHES 200
 // defines the minimum value, required for a next ICP iteration to be started, of the ratio of the last iteration change in error and the previous last one. This is equivalent to stopping the iterative process when it seems like the error has converged.
-#define MAX_ERROR_CHANGE_DECREASE_BETWEEN_ICP_ITERATIONS 0.85f
+#define MIN_ERROR_DECREASE_PER_ICP_ITERATION 0.01f
 
 // SEGMENTATION
 // ============================

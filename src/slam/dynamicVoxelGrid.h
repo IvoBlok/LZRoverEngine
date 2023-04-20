@@ -63,7 +63,7 @@ public:
   glm::mat4 transformationMatrix;
 
   // can store the points in the DVG in a tree-like structure, making the process of finding closest points significantly faster
-  KDTree* tree = nullptr;
+  slam::KDTree* tree = nullptr;
 
   // max 63, so the max value of a long is unique, and reserved for signaling non-initialized
   unsigned int lengthBitCount = 12;
