@@ -412,14 +412,14 @@ public:
   std::vector<float> generateRockSizes(std::vector<glm::vec3>& rockPositions) {
     std::vector<float> sizes;
 
-    float ePow = std::exp(7.f/5.f);
+    float pow = 7.f/5.f;
     float a = 1.f/14.f;
 
     for (size_t i = 0; i < rockPositions.size(); i++)
     {
       float x = (float)rand() / (float)RAND_MAX + 0.0001f;
 
-      sizes.push_back(a * std::log(ePow/(3*x)));
+      sizes.push_back(a * std::log(1/(3*x)) + a * pow);
     }
 
     return sizes;
