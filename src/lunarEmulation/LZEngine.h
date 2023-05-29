@@ -213,7 +213,7 @@ public:
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);  
     glEnable(GL_PROGRAM_POINT_SIZE);
-    //glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+    //glPolygonMode( GL_FRONT_AND_BACK, GL_LINE ); // wireframe mode
     /* #endregion */
 
     // build and compile our shader program
@@ -275,9 +275,8 @@ public:
     // initialize IMU variables
     IMUPoseEstimate = glm::mat4{1.f};
 
-    // from rover to world space
+    // store the initial rover pose for debug window usage
     initialRealPose = roverObject.calculateModelMatrix();
-
     realPose = initialRealPose;
 
     // initialize noise models

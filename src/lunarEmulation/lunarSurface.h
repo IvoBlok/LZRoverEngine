@@ -4,7 +4,7 @@
 #include "mesh.h"
 
 class BaseLunarSurface : public Mesh {
-public:
+  public:
   unsigned int gridXSquareCount;
   unsigned int gridZSquareCount;
   glm::vec2 offset;
@@ -284,7 +284,6 @@ public:
     glDeleteBuffers(1, &EBO);
     glDeleteVertexArrays(1, &VAO);
   }
-private:
 };
 
 class Rocks : public Mesh {
@@ -579,7 +578,7 @@ public:
       baseSurfaceLowDetail[i].generateLunarSurface(100, 100, 0.1f, "../resources/textures/sandDiffuseMap.png", 0.004f, surfacePositions[i]);
     }
 
-    rocks.generateRocksOnSurface(baseSurfaceHighDetail);
+   rocks.generateRocksOnSurface(baseSurfaceHighDetail);
   }
 
   void draw(Shader& shader, int FBO = -1) {
